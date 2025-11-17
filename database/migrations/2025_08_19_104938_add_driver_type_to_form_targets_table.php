@@ -12,7 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('form_targets', function (Blueprint $table) {
-            $table->string('driver_type')->default('http')->after('action_override');
+            if (!Schema::hasColumn('form_targets', 'driver_type')) {
+                $table->string('driver_type')->default('http')->after('action_override');
+            }
         });
     }
 
