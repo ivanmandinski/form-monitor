@@ -30,6 +30,23 @@ Route::view('profile', 'profile')
     ->middleware(['auth'])
     ->name('profile');
 
+// Debug route to check role (remove after debugging)
+Route::get('/debug-role', function () {
+    if (!auth()->check()) {
+        return response()->json(['error' => 'Not logged in'], 401);
+    }
+    
+    $user = auth()->user();
+    return response()->json([
+        'email' => $user->email,
+        'id' => $user->id,
+        'has_admin_role' => $user->hasRole('admin'),
+        'roles' => $user->getRoleNames()->toArray(),
+        'all_roles' => $user->roles->pluck('name')->toArray(),
+        'guard_name_check' => $user->roles->pluck('guard_name')->toArray(),
+    ]);
+})->middleware('auth');
+
 // Admin routes
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::view('dashboard', 'admin.dashboard')->name('dashboard');
