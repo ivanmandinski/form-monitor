@@ -2,17 +2,14 @@
 nixPkgs = [
     "php82",
     "php82Packages.composer",
-    "nodejs_20",
-    "chromium"
+    "nodejs_20"
 ]
 
 [phases.install]
 cmds = [
     "composer install --no-dev --optimize-autoloader",
     "npm ci",
-    "npm run build",
-    "ln -sf $(which chromium) /usr/bin/chromium-browser || true",
-    "ln -sf $(which chromium) /usr/bin/google-chrome || true"
+    "npm run build"
 ]
 
 [start]
