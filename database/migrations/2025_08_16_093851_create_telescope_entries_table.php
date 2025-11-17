@@ -19,6 +19,11 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // Skip if Telescope is disabled
+        if (!config('telescope.enabled', false)) {
+            return;
+        }
+
         $schema = Schema::connection($this->getConnection());
 
         $schema->create('telescope_entries', function (Blueprint $table) {
