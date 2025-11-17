@@ -33,8 +33,19 @@ LOG_LEVEL=error
 # DATABASE CONFIGURATION (PostgreSQL)
 # =============================================================================
 # Using your PostgreSQL service name: Postgres
+# Try Option 1 first, if it doesn't work, use Option 2
+
+# Option 1: Use DATABASE_URL (if Railway provides it)
+# DB_CONNECTION=pgsql
+# DATABASE_URL=${{Postgres.DATABASE_URL}}
+
+# Option 2: Use Individual Variables (if DATABASE_URL doesn't work)
 DB_CONNECTION=pgsql
-DATABASE_URL=${{Postgres.DATABASE_URL}}
+DB_HOST=${{Postgres.PGHOST}}
+DB_PORT=${{Postgres.PGPORT}}
+DB_DATABASE=${{Postgres.PGDATABASE}}
+DB_USERNAME=${{Postgres.PGUSER}}
+DB_PASSWORD=${{Postgres.PGPASSWORD}}
 
 # =============================================================================
 # REDIS CONFIGURATION

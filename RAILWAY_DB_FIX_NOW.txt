@@ -1,0 +1,30 @@
+# IMMEDIATE FIX: Use Individual Database Variables
+# Railway may not provide DATABASE_URL, so use individual variables instead
+# 
+# Copy these into Railway Dashboard → Your Web Service → Variables Tab
+# Replace 'Postgres' with your actual service name if different
+
+# =============================================================================
+# DATABASE CONFIGURATION - Use Individual Variables
+# =============================================================================
+# Remove DATABASE_URL if you have it, and use these instead:
+DB_CONNECTION=pgsql
+DB_HOST=${{Postgres.PGHOST}}
+DB_PORT=${{Postgres.PGPORT}}
+DB_DATABASE=${{Postgres.PGDATABASE}}
+DB_USERNAME=${{Postgres.PGUSER}}
+DB_PASSWORD=${{Postgres.PGPASSWORD}}
+
+# =============================================================================
+# IMPORTANT NOTES:
+# =============================================================================
+# 1. Railway uses PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD
+#    NOT DB_HOST, DB_PORT, etc. in the service variables
+# 
+# 2. Make sure your PostgreSQL service name is exactly "Postgres"
+#    (case-sensitive)
+# 
+# 3. After adding these, Railway will auto-redeploy
+# 
+# 4. Check Railway logs to verify the connection works
+
