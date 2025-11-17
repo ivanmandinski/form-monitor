@@ -32,13 +32,16 @@ APP_ENV=production
 APP_DEBUG=false
 APP_URL=https://your-app.up.railway.app
 
-# Database (use Railway's variable references)
+# Database (use Railway's DATABASE_URL - Recommended)
 DB_CONNECTION=pgsql
-DB_HOST=${{Postgres.DB_HOST}}
-DB_PORT=${{Postgres.DB_PORT}}
-DB_DATABASE=${{Postgres.DB_DATABASE}}
-DB_USERNAME=${{Postgres.DB_USER}}
-DB_PASSWORD=${{Postgres.DB_PASSWORD}}
+DATABASE_URL=${{Postgres.DATABASE_URL}}
+
+# OR use individual variables:
+# DB_HOST=${{Postgres.PGHOST}}
+# DB_PORT=${{Postgres.PGPORT}}
+# DB_DATABASE=${{Postgres.PGDATABASE}}
+# DB_USERNAME=${{Postgres.PGUSER}}
+# DB_PASSWORD=${{Postgres.PGPASSWORD}}
 
 # Redis
 REDIS_HOST=${{Redis.REDIS_HOST}}

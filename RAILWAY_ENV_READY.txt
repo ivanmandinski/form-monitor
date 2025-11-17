@@ -8,7 +8,7 @@ APP_ENV=production
 APP_KEY=base64:T091wRqqzsZFkP87sXi7RTXHUHXKx2TrWhjbI2eRMsU=
 APP_DEBUG=false
 APP_TIMEZONE=UTC
-APP_URL=https://your-app.up.railway.app
+APP_URL=https://web-production-85cc5.up.railway.app
 APP_LOCALE=en
 APP_FALLBACK_LOCALE=en
 APP_FAKER_LOCALE=en_US
@@ -22,15 +22,18 @@ LOG_DEPRECATIONS_CHANNEL=null
 LOG_LEVEL=error
 
 # =============================================================================
-# DATABASE (Use Railway variable references)
+# DATABASE (Use Railway DATABASE_URL - Recommended)
 # =============================================================================
 # Replace 'Postgres' with your actual PostgreSQL service name
 DB_CONNECTION=pgsql
-DB_HOST=${{Postgres.DB_HOST}}
-DB_PORT=${{Postgres.DB_PORT}}
-DB_DATABASE=${{Postgres.DB_DATABASE}}
-DB_USERNAME=${{Postgres.DB_USER}}
-DB_PASSWORD=${{Postgres.DB_PASSWORD}}
+DATABASE_URL=${{Postgres.DATABASE_URL}}
+
+# OR use individual variables if DATABASE_URL doesn't work:
+# DB_HOST=${{Postgres.PGHOST}}
+# DB_PORT=${{Postgres.PGPORT}}
+# DB_DATABASE=${{Postgres.PGDATABASE}}
+# DB_USERNAME=${{Postgres.PGUSER}}
+# DB_PASSWORD=${{Postgres.PGPASSWORD}}
 
 # =============================================================================
 # REDIS (Use Railway variable references)

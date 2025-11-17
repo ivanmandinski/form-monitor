@@ -36,15 +36,23 @@ Railway will:
 
 3. **Add these environment variables:**
 
-   For **PostgreSQL**:
+   For **PostgreSQL** (Option 1 - Use DATABASE_URL - Recommended):
    ```env
    DB_CONNECTION=pgsql
-   DB_HOST=${{Postgres.DB_HOST}}
-   DB_PORT=${{Postgres.DB_PORT}}
-   DB_DATABASE=${{Postgres.DB_DATABASE}}
-   DB_USERNAME=${{Postgres.DB_USER}}
-   DB_PASSWORD=${{Postgres.DB_PASSWORD}}
+   DATABASE_URL=${{Postgres.DATABASE_URL}}
    ```
+   
+   OR (Option 2 - Use individual variables):
+   ```env
+   DB_CONNECTION=pgsql
+   DB_HOST=${{Postgres.PGHOST}}
+   DB_PORT=${{Postgres.PGPORT}}
+   DB_DATABASE=${{Postgres.PGDATABASE}}
+   DB_USERNAME=${{Postgres.PGUSER}}
+   DB_PASSWORD=${{Postgres.PGPASSWORD}}
+   ```
+   
+   **Note:** Railway provides `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD` for PostgreSQL, not `DB_HOST`, `DB_PORT`, etc.
 
    For **MySQL**:
    ```env
@@ -122,8 +130,17 @@ Repeat for:
    - `PGUSER` (or `MYSQL_USER`)
    - `PGPASSWORD` (or `MYSQL_PASSWORD`)
 
-4. **In your web service**, add variables that reference these:
+4. **In your web service**, you have two options:
+
+   **Option A: Use DATABASE_URL (Easiest - Recommended)**
    ```env
+   DB_CONNECTION=pgsql
+   DATABASE_URL=${{Postgres.DATABASE_URL}}
+   ```
+   
+   **Option B: Use individual variables**
+   ```env
+   DB_CONNECTION=pgsql
    DB_HOST=${{Postgres.PGHOST}}
    DB_PORT=${{Postgres.PGPORT}}
    DB_DATABASE=${{Postgres.PGDATABASE}}
@@ -142,13 +159,16 @@ APP_ENV=production
 APP_DEBUG=false
 APP_URL=https://your-app.up.railway.app
 
-# Database (using Railway variable references)
+# Database (using Railway DATABASE_URL - Easiest method)
 DB_CONNECTION=pgsql
-DB_HOST=${{Postgres.PGHOST}}
-DB_PORT=${{Postgres.PGPORT}}
-DB_DATABASE=${{Postgres.PGDATABASE}}
-DB_USERNAME=${{Postgres.PGUSER}}
-DB_PASSWORD=${{Postgres.PGPASSWORD}}
+DATABASE_URL=${{Postgres.DATABASE_URL}}
+
+# OR use individual variables (if DATABASE_URL doesn't work):
+# DB_HOST=${{Postgres.PGHOST}}
+# DB_PORT=${{Postgres.PGPORT}}
+# DB_DATABASE=${{Postgres.PGDATABASE}}
+# DB_USERNAME=${{Postgres.PGUSER}}
+# DB_PASSWORD=${{Postgres.PGPASSWORD}}
 
 # Redis
 REDIS_HOST=${{Redis.REDIS_HOST}}
