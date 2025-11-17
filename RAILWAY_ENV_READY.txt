@@ -39,7 +39,7 @@ DATABASE_URL=${{Postgres.DATABASE_URL}}
 # REDIS (Use Railway variable references)
 # =============================================================================
 # Replace 'Redis' with your actual Redis service name
-REDIS_CLIENT=phpredis
+REDIS_CLIENT=predis
 REDIS_HOST=${{Redis.REDIS_HOST}}
 REDIS_PASSWORD=${{Redis.REDIS_PASSWORD}}
 REDIS_PORT=${{Redis.REDIS_PORT}}
