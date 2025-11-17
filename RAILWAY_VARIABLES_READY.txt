@@ -13,7 +13,7 @@ APP_ENV=production
 APP_KEY=base64:T091wRqqzsZFkP87sXi7RTXHUHXKx2TrWhjbI2eRMsU=
 APP_DEBUG=false
 APP_TIMEZONE=UTC
-APP_URL=https://your-app.up.railway.app
+APP_URL=https://web-production-85cc5.up.railway.app
 APP_LOCALE=en
 APP_FALLBACK_LOCALE=en
 APP_FAKER_LOCALE=en_US
