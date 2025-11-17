@@ -16,6 +16,13 @@ return new class extends Migration
         // First, backup existing data
         $existingData = DB::table('check_runs')->get();
         
+        // Drop foreign key constraint from check_artifacts if it exists
+        if (Schema::hasTable('check_artifacts')) {
+            Schema::table('check_artifacts', function (Blueprint $table) {
+                $table->dropForeign(['check_run_id']);
+            });
+        }
+        
         // Drop the existing table
         Schema::dropIfExists('check_runs');
         
@@ -51,6 +58,13 @@ return new class extends Migration
                 'updated_at' => $row->updated_at,
             ]);
         }
+        
+        // Recreate foreign key constraint if check_artifacts table exists
+        if (Schema::hasTable('check_artifacts')) {
+            Schema::table('check_artifacts', function (Blueprint $table) {
+                $table->foreign('check_run_id')->references('id')->on('check_runs')->onDelete('cascade');
+            });
+        }
     }
 
     /**
@@ -60,6 +74,13 @@ return new class extends Migration
     {
         // Backup data
         $existingData = DB::table('check_runs')->get();
+        
+        // Drop foreign key constraint from check_artifacts if it exists
+        if (Schema::hasTable('check_artifacts')) {
+            Schema::table('check_artifacts', function (Blueprint $table) {
+                $table->dropForeign(['check_run_id']);
+            });
+        }
         
         // Drop the table
         Schema::dropIfExists('check_runs');
@@ -97,6 +118,13 @@ return new class extends Migration
                     'updated_at' => $row->updated_at,
                 ]);
             }
+        }
+        
+        // Recreate foreign key constraint if check_artifacts table exists
+        if (Schema::hasTable('check_artifacts')) {
+            Schema::table('check_artifacts', function (Blueprint $table) {
+                $table->foreign('check_run_id')->references('id')->on('check_runs')->onDelete('cascade');
+            });
         }
     }
 };
