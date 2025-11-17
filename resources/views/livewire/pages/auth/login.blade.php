@@ -20,13 +20,8 @@ new #[Layout('layouts.guest')] class extends Component
 
         Session::regenerate();
 
-        // Redirect based on user role
-        if (auth()->user()->hasRole('admin')) {
-            $this->redirect(route('admin.dashboard', absolute: false), navigate: true);
-            return;
-        }
-
-        $this->redirectIntended(default: route('dashboard', absolute: false), navigate: true);
+        // All authenticated users go to admin dashboard
+        $this->redirect(route('admin.dashboard', absolute: false), navigate: true);
     }
 }; ?>
 

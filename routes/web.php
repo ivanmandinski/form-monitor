@@ -7,19 +7,14 @@ use App\Http\Controllers\Admin\FieldMappingController;
 use App\Http\Controllers\Admin\CheckRunController;
 use App\Http\Controllers\Admin\SettingsController;
 
-// Redirect root to login if not authenticated, or to appropriate dashboard if authenticated
+// Redirect root to login if not authenticated, or to admin dashboard if authenticated
 Route::get('/', function () {
     if (!auth()->check()) {
         return redirect()->route('login');
     }
     
-    // If authenticated, redirect based on role
-    if (auth()->user()->hasRole('admin')) {
-        return redirect()->route('admin.dashboard');
-    }
-    
-    // For regular users, redirect to dashboard
-    return redirect()->route('dashboard');
+    // All authenticated users go to admin dashboard
+    return redirect()->route('admin.dashboard');
 })->name('home');
 
 Route::view('dashboard', 'dashboard')
@@ -47,8 +42,8 @@ Route::get('/debug-role', function () {
     ]);
 })->middleware('auth');
 
-// Admin routes
-Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+// Admin routes - all authenticated users have access
+Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () {
     Route::view('dashboard', 'admin.dashboard')->name('dashboard');
     
     // Targets
