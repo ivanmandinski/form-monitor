@@ -22,13 +22,16 @@ class LoginController extends Controller
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
             $request->session()->regenerate();
 
+            // Clear any intended URL to force role-based redirect
+            $request->session()->forget('url.intended');
+
             // Redirect based on user role
             if (Auth::user()->hasRole('admin')) {
-                return redirect()->intended(route('admin.dashboard'));
+                return redirect()->route('admin.dashboard');
             }
 
             // For regular users, redirect to dashboard
-            return redirect()->intended(route('dashboard'));
+            return redirect()->route('dashboard');
         }
 
         return back()->withErrors([
