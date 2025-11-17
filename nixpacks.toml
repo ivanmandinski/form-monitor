@@ -7,8 +7,8 @@ nixPkgs = [
 
 [phases.install]
 cmds = [
-    "composer install --no-dev --optimize-autoloader",
     "rm -rf bootstrap/cache/*.php",
+    "composer install --no-dev --optimize-autoloader --no-scripts",
     "php artisan package:discover --ansi",
     "npm ci",
     "npm run build"
