@@ -15,7 +15,12 @@ This is a condensed guide for deploying Form Monitor on Railway. For detailed in
 Add these services in Railway:
 
 - **PostgreSQL** (or MySQL) - Database
+  - Click "+ New" → "Database" → Choose PostgreSQL or MySQL
+  - Railway will automatically create and configure it
+  - See [RAILWAY_DATABASE_SETUP.md](RAILWAY_DATABASE_SETUP.md) for detailed instructions
+
 - **Redis** - Queue and cache
+  - Click "+ New" → "Database" → Choose Redis
 
 ### 3. Configure Environment Variables
 
