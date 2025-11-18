@@ -2,7 +2,25 @@
 nixPkgs = [
     "php82",
     "php82Packages.composer",
-    "nodejs_20"
+    "nodejs_20",
+    "glib",
+    "nss",
+    "atk",
+    "at-spi2-atk",
+    "libdrm",
+    "libxcomposite",
+    "libxdamage",
+    "libxrandr",
+    "mesa",
+    "libxss",
+    "alsa-lib",
+    "libatk-bridge-2.0",
+    "cairo",
+    "pango",
+    "gdk-pixbuf",
+    "gtk3",
+    "libxkbcommon",
+    "libxshmfence"
 ]
 
 [phases.install]
@@ -15,5 +33,5 @@ cmds = [
 ]
 
 [start]
-cmd = "rm -rf bootstrap/cache/*.php && php artisan package:discover --ansi && php artisan migrate --force || true && php artisan serve --host=0.0.0.0 --port=$PORT"
+cmd = "bash .railway/start.sh"
 
