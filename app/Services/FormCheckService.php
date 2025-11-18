@@ -422,15 +422,20 @@ class FormCheckService
 
     private function storeArtifact(CheckRun $checkRun, string $type, string $content): void
     {
-        $filename = 'artifacts/' . uniqid() . '_' . $checkRun->id . '.' . ($type === 'html' ? 'html' : 'png');
-        
-        if ($type === 'html') {
-            Storage::put($filename, $content);
-        } else {
-            // Screenshot is already saved by Dusk
-            $filename = $content;
+        $disk = Storage::disk('public');
+
+        $filename = match ($type) {
+            CheckArtifact::TYPE_HTML => 'artifacts/' . uniqid() . '_' . $checkRun->id . '_html.html',
+            CheckArtifact::TYPE_DEBUG_INFO => 'artifacts/' . uniqid() . '_' . $checkRun->id . '_debug.json',
+            default => $content,
+        };
+
+        if ($type === CheckArtifact::TYPE_HTML) {
+            $disk->put($filename, $content);
+        } elseif ($type === CheckArtifact::TYPE_DEBUG_INFO) {
+            $disk->put($filename, $content);
         }
-        
+
         CheckArtifact::create([
             'check_run_id' => $checkRun->id,
             'type' => $type,
