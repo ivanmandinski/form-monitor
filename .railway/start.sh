@@ -7,6 +7,11 @@ source "$SCRIPT_DIR/env.sh"
 # Clear cache
 rm -rf bootstrap/cache/*.php
 
+# Ensure storage symlink exists for artifact access
+if [ ! -L public/storage ]; then
+    php artisan storage:link || true
+fi
+
 # Discover packages
 php artisan package:discover --ansi
 
