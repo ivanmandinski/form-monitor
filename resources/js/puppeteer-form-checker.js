@@ -49,6 +49,14 @@ class PuppeteerFormChecker {
     this.lastFormSelector = null;
   }
 
+  async waitFor(ms = 1000) {
+    if (this.page && typeof this.page.waitForTimeout === 'function') {
+      await this.page.waitForTimeout(ms);
+    } else {
+      await new Promise((resolve) => setTimeout(resolve, ms));
+    }
+  }
+
   async initialize() {
     const launchOptions = {
       headless: process.env.PUPPETEER_HEADLESS !== 'false',
@@ -200,7 +208,7 @@ class PuppeteerFormChecker {
       if (waitForJavaScript) {
         console.error('Waiting for JavaScript to load...');
         await this.page.waitForFunction(() => document.readyState === 'complete', { timeout: 10000 });
-        await this.page.waitForTimeout(1000); // Additional wait for dynamic content
+        await this.waitFor(1000); // Additional wait for dynamic content
       }
 
       // Wait for specific elements if specified
@@ -288,7 +296,7 @@ class PuppeteerFormChecker {
       // Additional wait for form processing
       console.error('Waiting for form processing...');
       try {
-        await this.page.waitForTimeout(3000); // Wait 3 seconds for form processing
+        await this.waitFor(3000); // Wait 3 seconds for form processing
       } catch (timeoutError) {
         console.error('Form processing wait timeout');
       }
@@ -466,7 +474,7 @@ class PuppeteerFormChecker {
 
               // Scroll element into view
               await element.scrollIntoView();
-              await this.page.waitForTimeout(200);
+              await this.waitFor(200);
 
               // Focus the element
               await element.focus();
@@ -575,25 +583,25 @@ class PuppeteerFormChecker {
         const clickElement = await this.page.$(selector);
         if (clickElement) {
           await clickElement.click();
-          await this.page.waitForTimeout(waitTime);
+          await this.waitFor(waitTime);
         }
         break;
       case 'type':
         const typeElement = await this.page.$(selector);
         if (typeElement) {
           await typeElement.type(value);
-          await this.page.waitForTimeout(waitTime);
+          await this.waitFor(waitTime);
         }
         break;
       case 'select':
         const selectElement = await this.page.$(selector);
         if (selectElement) {
           await selectElement.select(value);
-          await this.page.waitForTimeout(waitTime);
+          await this.waitFor(waitTime);
         }
         break;
       case 'wait':
-        await this.page.waitForTimeout(waitTime);
+        await this.waitFor(waitTime);
         break;
       case 'waitForSelector':
         await this.page.waitForSelector(selector, { timeout: 10000 });
@@ -658,7 +666,7 @@ class PuppeteerFormChecker {
               // Scroll element into view if needed
               if (!isIntersectingViewport) {
                 await elementHandle.scrollIntoView();
-                await this.page.waitForTimeout(500);
+                await this.waitFor(500);
               }
 
               // Try different click methods
@@ -671,7 +679,7 @@ class PuppeteerFormChecker {
                 console.error(`Click failed, trying hover + click: ${clickError.message}`);
                 try {
                   await elementHandle.hover();
-                  await this.page.waitForTimeout(200);
+                  await this.waitFor(200);
                   await elementHandle.click();
                   console.error(`Form submitted using hover + click: ${selector}`);
                   submitted = true;
