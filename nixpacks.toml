@@ -12,7 +12,7 @@ nixPkgs = [
     "libXdamage",
     "libXrandr",
     "mesa",
-    "libXScrnSaver",
+    "libXss",
     "alsa-lib",
     "cairo",
     "pango",
