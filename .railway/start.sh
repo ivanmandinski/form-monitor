@@ -39,6 +39,13 @@ if [ -n "$LIB_PATHS" ]; then
     export LD_LIBRARY_PATH="${LIB_PATHS#:}:$LD_LIBRARY_PATH"
 fi
 
+# Export Chromium path for Puppeteer if available
+CHROMIUM_PATH=$(command -v chromium || true)
+if [ -n "$CHROMIUM_PATH" ]; then
+    export PUPPETEER_EXECUTABLE_PATH="$CHROMIUM_PATH"
+    export PUPPETEER_PRODUCT="chrome"
+fi
+
 # Clear cache
 rm -rf bootstrap/cache/*.php
 

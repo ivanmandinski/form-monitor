@@ -50,7 +50,7 @@ class PuppeteerFormChecker {
   }
 
   async initialize() {
-    this.browser = await puppeteer.launch({
+    const launchOptions = {
       headless: process.env.PUPPETEER_HEADLESS !== 'false',
       args: [
         '--no-sandbox',
@@ -96,7 +96,17 @@ class PuppeteerFormChecker {
       ignoreDefaultArgs: ['--disable-extensions'],
       ignoreHTTPSErrors: true,
       defaultViewport: null
-    });
+    };
+
+    if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+      launchOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+    }
+
+    if (process.env.PUPPETEER_PRODUCT) {
+      launchOptions.product = process.env.PUPPETEER_PRODUCT;
+    }
+
+    this.browser = await puppeteer.launch(launchOptions);
     
     this.page = await this.browser.newPage();
     

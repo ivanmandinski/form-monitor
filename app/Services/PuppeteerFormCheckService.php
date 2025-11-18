@@ -117,6 +117,8 @@ class PuppeteerFormCheckService
         $env = $_ENV;
         $env['PUPPETEER_HEADLESS'] = config('form-monitor.puppeteer.headless', 'true');
         $env['CAPTCHA_SOLVER_API_KEY'] = config('form-monitor.captcha.api_key', '');
+        $env['PUPPETEER_EXECUTABLE_PATH'] = env('PUPPETEER_EXECUTABLE_PATH', $env['PUPPETEER_EXECUTABLE_PATH'] ?? '');
+        $env['PUPPETEER_PRODUCT'] = env('PUPPETEER_PRODUCT', $env['PUPPETEER_PRODUCT'] ?? 'chrome');
         
         // Ensure LD_LIBRARY_PATH is set for Chromium libraries
         if (empty($env['LD_LIBRARY_PATH'])) {
