@@ -19,7 +19,7 @@ nixPkgs = [
     "gdk-pixbuf",
     "gtk3",
     "libxkbcommon",
-    "libxshmfence"
+    "xorg.libXshmfence"
 ]
 
 [phases.install]
