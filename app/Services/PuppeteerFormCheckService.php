@@ -140,6 +140,38 @@ class PuppeteerFormCheckService
         $env = $_ENV;
         $env['PUPPETEER_HEADLESS'] = config('form-monitor.puppeteer.headless', 'true');
         $env['CAPTCHA_SOLVER_API_KEY'] = config('form-monitor.captcha.api_key', '');
+        
+        // Ensure LD_LIBRARY_PATH is set for Chromium libraries
+        if (empty($env['LD_LIBRARY_PATH'])) {
+            // Try to find and set library paths if not already set
+            $libPaths = [];
+            $libs = [
+                'libglib-2.0.so',
+                'libnss3.so',
+                'libatk-1.0.so',
+                'libatspi.so',
+                'libdrm.so',
+                'libXcomposite.so',
+                'libXdamage.so',
+                'libXrandr.so',
+                'libGL.so',
+                'libXss.so',
+                'libasound.so',
+                'libatk-bridge-2.0.so',
+            ];
+            
+            foreach ($libs as $lib) {
+                $output = shell_exec("find /nix/store -name '{$lib}*' -type f 2>/dev/null | head -1 | xargs dirname 2>/dev/null");
+                if ($output && trim($output)) {
+                    $libPaths[] = trim($output);
+                }
+            }
+            
+            if (!empty($libPaths)) {
+                $env['LD_LIBRARY_PATH'] = implode(':', array_unique($libPaths));
+            }
+        }
+        
         $process->setEnv($env);
 
         Log::info('Running Puppeteer form check', [
