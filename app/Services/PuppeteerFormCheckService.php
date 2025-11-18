@@ -21,19 +21,16 @@ class PuppeteerFormCheckService
         $this->timeout = config('form-monitor.timeouts.puppeteer', 120); // 2 minutes
     }
 
-    public function checkForm(FormTarget $formTarget): CheckRun
+    /**
+     * Run Puppeteer form check and return result data (not a CheckRun).
+     * The CheckRun should be created and managed by the calling service.
+     */
+    public function checkForm(FormTarget $formTarget): array
     {
         // Set PHP execution time limit for this process
         $originalTimeLimit = ini_get('max_execution_time');
         $timeout = config('form-monitor.timeouts.puppeteer', 300);
         set_time_limit($timeout);
-        
-        $checkRun = CheckRun::create([
-            'form_target_id' => $formTarget->id,
-            'driver' => 'puppeteer',
-            'status' => 'pending',
-            'started_at' => now(),
-        ]);
 
         try {
             $result = $this->runPuppeteerCheck($formTarget);
@@ -47,32 +44,15 @@ class PuppeteerFormCheckService
                 'result_keys' => array_keys($result),
             ]);
 
-            $checkRun->update([
+            // Return result data in format expected by FormCheckService
+            return [
                 'status' => $this->mapStatus($result['status'] ?? 'unknown'),
                 'final_url' => $result['finalUrl'] ?? null,
                 'message_excerpt' => $result['message'] ?? null,
                 'error_detail' => $result['success'] ? null : ['error' => $result['error'] ?? 'Unknown error'],
-                'finished_at' => now(),
-            ]);
-
-            // Store artifacts
-            if (isset($result['html'])) {
-                Log::info('Storing HTML artifact', [
-                    'form_target_id' => $formTarget->id,
-                    'html_length' => strlen($result['html']),
-                ]);
-                $this->storeArtifact($checkRun, 'html', $result['html']);
-            } else {
-                Log::warning('No HTML content found in Puppeteer result', [
-                    'form_target_id' => $formTarget->id,
-                    'result_keys' => array_keys($result),
-                ]);
-            }
-
-            // Store debug info if there was an error
-            if (isset($result['debugInfo'])) {
-                $this->storeArtifact($checkRun, CheckArtifact::TYPE_DEBUG_INFO, json_encode($result['debugInfo']));
-            }
+                'html' => $result['html'] ?? null,
+                'debug_info' => $result['debugInfo'] ?? null,
+            ];
 
         } catch (\Exception $e) {
             Log::error('Puppeteer form check failed', [
@@ -81,22 +61,19 @@ class PuppeteerFormCheckService
                 'trace' => $e->getTraceAsString(),
             ]);
 
-            $checkRun->update([
+            return [
                 'status' => CheckRun::STATUS_ERROR,
                 'error_detail' => [
                     'message' => $e->getMessage(),
                     'trace' => $e->getTraceAsString(),
                 ],
-                'finished_at' => now(),
-            ]);
+            ];
         } finally {
             // Restore original PHP execution time limit
             if (isset($originalTimeLimit)) {
                 set_time_limit($originalTimeLimit);
             }
         }
-
-        return $checkRun;
     }
 
     private function runPuppeteerCheck(FormTarget $formTarget): array

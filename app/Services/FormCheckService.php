@@ -101,6 +101,9 @@ class FormCheckService
             if (isset($result['screenshot'])) {
                 $this->storeArtifact($checkRun, 'screenshot', $result['screenshot']);
             }
+            if (isset($result['debug_info'])) {
+                $this->storeArtifact($checkRun, CheckArtifact::TYPE_DEBUG_INFO, json_encode($result['debug_info']));
+            }
 
         } catch (\Exception $e) {
             Log::error('Form check failed', [
@@ -130,24 +133,23 @@ class FormCheckService
         ]);
 
         try {
-            $checkRun = $this->puppeteerService->checkForm($formTarget);
+            $result = $this->puppeteerService->checkForm($formTarget);
             
             Log::info('✅ Puppeteer form check completed successfully', [
                 'form_target_id' => $formTarget->id,
-                'check_run_id' => $checkRun->id,
-                'status' => $checkRun->status,
-                'final_url' => $checkRun->final_url,
+                'status' => $result['status'] ?? 'unknown',
+                'final_url' => $result['final_url'] ?? null,
             ]);
             
-            // Convert CheckRun to array format expected by this method
+            // Return result data - CheckRun will be updated by the calling method
             return [
-                'status' => $checkRun->status,
+                'status' => $result['status'] ?? CheckRun::STATUS_ERROR,
                 'http_status' => null,
-                'final_url' => $checkRun->final_url,
-                'message_excerpt' => $checkRun->message_excerpt,
-                'html' => $checkRun->artifacts()->where('type', 'html')->first()?->path ? $checkRun->artifacts()->where('type', 'html')->first()->path : null,
-                'puppeteer_used' => true,
-                'check_run_id' => $checkRun->id,
+                'final_url' => $result['final_url'] ?? null,
+                'message_excerpt' => $result['message_excerpt'] ?? null,
+                'error_detail' => $result['error_detail'] ?? null,
+                'html' => $result['html'] ?? null,
+                'debug_info' => $result['debug_info'] ?? null,
             ];
         } catch (\Exception $e) {
             Log::error('❌ Puppeteer form check failed', [
