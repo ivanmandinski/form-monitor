@@ -419,7 +419,7 @@ class PuppeteerFormChecker {
       if (captchaFound) {
         // Use the recaptcha plugin to solve
         await this.page.solveRecaptchas();
-        console.log('CAPTCHA solving attempted');
+        console.error('CAPTCHA solving attempted');
         
         // Wait a bit for the solution to be processed
         await this.page.waitForNetworkIdle({ timeout: 5000 });
