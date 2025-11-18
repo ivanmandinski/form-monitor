@@ -119,6 +119,18 @@ class PuppeteerFormCheckService
         $env['CAPTCHA_SOLVER_API_KEY'] = config('form-monitor.captcha.api_key', '');
         $env['PUPPETEER_EXECUTABLE_PATH'] = env('PUPPETEER_EXECUTABLE_PATH', $env['PUPPETEER_EXECUTABLE_PATH'] ?? '');
         $env['PUPPETEER_PRODUCT'] = env('PUPPETEER_PRODUCT', $env['PUPPETEER_PRODUCT'] ?? 'chrome');
+
+        if (empty($env['PUPPETEER_EXECUTABLE_PATH'])) {
+            $detectedBinary = $this->detectChromiumBinary();
+            if ($detectedBinary) {
+                $env['PUPPETEER_EXECUTABLE_PATH'] = $detectedBinary;
+                Log::info('Detected Chromium binary for Puppeteer', [
+                    'path' => $detectedBinary,
+                ]);
+            } else {
+                Log::warning('Failed to detect Chromium binary for Puppeteer. Falling back to bundled browser.');
+            }
+        }
         
         // Ensure LD_LIBRARY_PATH is set for Chromium libraries
         if (empty($env['LD_LIBRARY_PATH'])) {
@@ -193,6 +205,33 @@ class PuppeteerFormCheckService
 
             throw new \Exception('Puppeteer process failed: ' . $errorOutput ?: $e->getMessage());
         }
+    }
+
+    private function detectChromiumBinary(): ?string
+    {
+        $candidates = [
+            'chromium',
+            'chromium-browser',
+            'google-chrome',
+            '/usr/bin/chromium',
+            '/usr/bin/chromium-browser',
+            '/usr/bin/google-chrome',
+        ];
+
+        foreach ($candidates as $candidate) {
+            $command = "command -v {$candidate} 2>/dev/null";
+            $path = shell_exec($command);
+            if ($path && trim($path)) {
+                return trim($path);
+            }
+        }
+
+        $globCandidates = glob('/nix/store/*-chromium-*/bin/chromium');
+        if (!empty($globCandidates)) {
+            return $globCandidates[0];
+        }
+
+        return null;
     }
 
     private function mapStatus(string $puppeteerStatus): string
