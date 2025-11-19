@@ -47,6 +47,8 @@ class PuppeteerFormChecker {
     this.page = null;
     this.initialUrl = null;
     this.lastFormSelector = null;
+    this.captchaMonitorEnabled = false;
+    this.captchaDetected = false;
   }
 
   async waitFor(ms = 1000) {
@@ -191,8 +193,12 @@ class PuppeteerFormChecker {
         waitForJavaScript = true,
         executeJavaScript = null,
         waitForElements = [],
-        customActions = []
+        customActions = [],
+        captchaExpected = false
       } = config;
+
+      this.captchaMonitorEnabled = captchaExpected;
+      this.captchaDetected = false;
 
       // Use stderr for logging to avoid interfering with JSON output
       console.error(`Visiting: ${url}`);
@@ -256,12 +262,10 @@ class PuppeteerFormChecker {
         }
       }
 
-      // Check for reCAPTCHA and solve if present
+      // Check for CAPTCHA presence (monitor mode only)
       const captchaDetected = await this.detectAndSolveCaptcha();
       if (captchaDetected) {
-        console.error('CAPTCHA detected and solving...');
-        // Wait a bit more for CAPTCHA solution to be processed
-        await this.page.waitForNetworkIdle({ timeout: 10000 });
+        console.error('CAPTCHA detected (monitor mode - solver disabled)');
       }
 
       // Fill form fields with advanced interaction
@@ -328,13 +332,34 @@ class PuppeteerFormChecker {
       const message = await this.extractMessage(successSelector, errorSelector);
 
       // Only mark as success if form submission was validated
-      const finalSuccess = submissionValidated && status === 'success';
+      let finalSuccess = submissionValidated && status === 'success';
+      let finalStatus = finalSuccess ? status : 'failure';
+      let finalMessage = finalSuccess ? message : 'Form submission failed or could not be validated';
+      let captchaBlocking = false;
+
+      if (this.captchaMonitorEnabled) {
+        captchaBlocking = captchaDetected ? await this.isCaptchaBlockingSubmission() : false;
+
+        if (!captchaDetected) {
+          finalSuccess = false;
+          finalStatus = 'failure';
+          finalMessage = 'CAPTCHA was expected but not detected on the page';
+        } else if (captchaBlocking) {
+          finalSuccess = true;
+          finalStatus = 'success';
+          finalMessage = 'CAPTCHA blocked automated submission (expected behavior)';
+        } else {
+          finalSuccess = false;
+          finalStatus = 'failure';
+          finalMessage = 'CAPTCHA did not block submission';
+        }
+      }
       
       return {
         success: finalSuccess,
-        status: finalSuccess ? status : 'failure',
+        status: finalStatus,
         finalUrl,
-        message: finalSuccess ? message : 'Form submission failed or could not be validated',
+        message: finalMessage,
         html: finalHtml,
         screenshot: screenshot,
         captchaDetected,
@@ -343,6 +368,9 @@ class PuppeteerFormChecker {
           initialUrl: this.initialUrl,
           finalUrl: finalUrl,
           formSelector: formSelector,
+          captchaExpected: this.captchaMonitorEnabled,
+          captchaDetected,
+          captchaBlocking,
           timestamp: new Date().toISOString()
         }
       };
@@ -417,19 +445,55 @@ class PuppeteerFormChecker {
       }
 
       if (captchaFound) {
-        // Use the recaptcha plugin to solve
-        await this.page.solveRecaptchas();
-        console.error('CAPTCHA solving attempted');
-        
-        // Wait a bit for the solution to be processed
-        await this.page.waitForNetworkIdle({ timeout: 5000 });
-        
+        this.captchaDetected = true;
         return true;
       }
 
+      this.captchaDetected = false;
       return false;
     } catch (error) {
       console.error('CAPTCHA detection/solving failed:', error.message);
+      this.captchaDetected = false;
+      return false;
+    }
+  }
+
+  async isCaptchaBlockingSubmission() {
+    try {
+      const pageText = await this.page.evaluate(() => document.body ? document.body.innerText.toLowerCase() : '');
+      const blockingPhrases = [
+        'captcha',
+        'recaptcha',
+        'please verify you are human',
+        'please verify you are not a robot',
+        'robot check',
+        'complete the captcha',
+        'captcha verification failed',
+        'captcha validation failed',
+        'captcha response is missing',
+        'captcha is required',
+        'recaptcha verification failed',
+        'i am not a robot',
+        'spam blocked',
+      ];
+
+      const textIndicatesBlock = blockingPhrases.some((phrase) => pageText.includes(phrase));
+
+      const captchaErrorSelectors = [
+        '.wpcf7-spam-blocked',
+        '.wpcf7-response-output.wpcf7-validation-errors',
+        '.g-recaptcha-error',
+        '.recaptcha-error',
+        '.h-captcha-error',
+      ];
+
+      const domIndicatesBlock = await this.page.evaluate((selectors) => {
+        return selectors.some((selector) => document.querySelector(selector));
+      }, captchaErrorSelectors);
+
+      return textIndicatesBlock || domIndicatesBlock;
+    } catch (error) {
+      console.error('Failed to determine CAPTCHA block status:', error.message);
       return false;
     }
   }

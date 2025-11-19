@@ -99,6 +99,7 @@ class PuppeteerFormCheckService
             'executeJavaScript' => $formTarget->execute_javascript ?? null,
             'waitForElements' => $formTarget->wait_for_elements ?? [],
             'customActions' => $formTarget->custom_actions ?? [],
+            'captchaExpected' => (bool) ($formTarget->recaptcha_expected ?? false),
         ];
 
         $configJson = json_encode($config);
