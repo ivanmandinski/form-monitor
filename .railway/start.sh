@@ -7,9 +7,12 @@ source "$SCRIPT_DIR/env.sh"
 # Clear cache
 rm -rf bootstrap/cache/*.php
 
-# Ensure storage symlink exists for artifact access
-if [ ! -L public/storage ]; then
-    php artisan storage:link || true
+# Ensure storage symlink exists for artifact access when using local storage
+PUBLIC_DISK_DRIVER=${PUBLIC_DISK_DRIVER:-local}
+if [ "$PUBLIC_DISK_DRIVER" != "s3" ]; then
+    if [ ! -L public/storage ]; then
+        php artisan storage:link || true
+    fi
 fi
 
 # Discover packages

@@ -117,3 +117,4 @@ Make sure you're using `bcrypt()` function, not just setting a plain string:
 - ✅ Correct: `$user->password = bcrypt('password');`
 - ❌ Wrong: `$user->password = 'password';`
 
+

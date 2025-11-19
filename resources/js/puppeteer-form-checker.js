@@ -49,6 +49,72 @@ class PuppeteerFormChecker {
     this.lastFormSelector = null;
     this.captchaMonitorEnabled = false;
     this.captchaDetected = false;
+    this.debugSteps = [];
+    this.validationLog = [];
+    this.classificationLog = [];
+    this.validationRules = {};
+  }
+
+  logStep(label, detail = {}) {
+    const entry = {
+      timestamp: new Date().toISOString(),
+      label,
+      detail,
+    };
+
+    this.debugSteps.push(entry);
+
+    if (process.env.PUPPETEER_DEBUG === 'true') {
+      console.error(`[STEP] ${label}`, detail);
+    }
+  }
+
+  async snapshotResponse(response) {
+    if (!response) {
+      return null;
+    }
+
+    try {
+      const headers = await response.headers();
+      const truncatedHeaders = Object.entries(headers).slice(0, 25).reduce((acc, [key, value]) => {
+        acc[key] = value;
+        return acc;
+      }, {});
+
+      return {
+        url: response.url(),
+        status: response.status(),
+        statusText: response.statusText(),
+        headers: truncatedHeaders,
+      };
+    } catch (error) {
+      this.logStep('response.snapshot.error', { message: error.message });
+      return null;
+    }
+  }
+
+  normalizeValidationRules(rules = {}) {
+    return {
+      successSelectors: rules.success_selectors || rules.successSelectors || [],
+      errorSelectors: rules.error_selectors || rules.errorSelectors || [],
+      successPhrases: rules.success_phrases || rules.successPhrases || [],
+      errorPhrases: rules.error_phrases || rules.errorPhrases || [],
+      urlChangeKeywords: rules.url_change_keywords || rules.urlChangeKeywords || [],
+    };
+  }
+
+  recordValidation(validated, reason) {
+    const entry = { validated, reason };
+    this.validationLog.push(entry);
+    this.logStep('validation.check', entry);
+    return entry;
+  }
+
+  recordClassification(status, reason) {
+    const entry = { status, reason };
+    this.classificationLog.push(entry);
+    this.logStep('classification.check', entry);
+    return entry;
   }
 
   async waitFor(ms = 1000) {
@@ -194,27 +260,41 @@ class PuppeteerFormChecker {
         executeJavaScript = null,
         waitForElements = [],
         customActions = [],
-        captchaExpected = false
+        captchaExpected = false,
+        validationRules = {}
       } = config;
 
       this.captchaMonitorEnabled = captchaExpected;
       this.captchaDetected = false;
+    this.debugSteps = [];
+      this.validationLog = [];
+      this.classificationLog = [];
+      this.validationRules = this.normalizeValidationRules(validationRules);
+    this.captchaDetails = { detected: false, selectors: [], errors: [] };
+      this.logStep('run.start', { url, captchaExpected });
 
       // Use stderr for logging to avoid interfering with JSON output
       console.error(`Visiting: ${url}`);
-      await this.page.goto(url, { 
+      this.logStep('navigation.request', { url, timeout });
+      const networkIdleTimeout = parseInt(process.env.PUPPETEER_IDLE_TIMEOUT_MS || '15000', 10);
+
+      const navigationResponse = await this.page.goto(url, { 
         waitUntil: 'networkidle2', 
         timeout: timeout 
       });
+      const navigationDetails = await this.snapshotResponse(navigationResponse);
+      this.logStep('navigation.response', navigationDetails || { warning: 'no response' });
       
       // Store initial URL for comparison
       this.initialUrl = this.page.url();
+      this.logStep('navigation.complete', { initialUrl: this.initialUrl });
 
       // Wait for JavaScript to load if required
       if (waitForJavaScript) {
         console.error('Waiting for JavaScript to load...');
         await this.page.waitForFunction(() => document.readyState === 'complete', { timeout: 10000 });
         await this.waitFor(1000); // Additional wait for dynamic content
+        this.logStep('dom.ready');
       }
 
       // Wait for specific elements if specified
@@ -226,8 +306,10 @@ class PuppeteerFormChecker {
             console.error(`Element found: ${elementSelector}`);
           } catch (waitError) {
             console.error(`Element not found: ${elementSelector}`);
+            this.logStep('element.wait.missed', { selector: elementSelector });
           }
         }
+        this.logStep('element.wait.complete');
       }
 
       // Execute custom JavaScript if provided
@@ -236,8 +318,10 @@ class PuppeteerFormChecker {
         try {
           await this.page.evaluate(executeJavaScript);
           console.error('Custom JavaScript executed successfully');
+          this.logStep('custom.js.success');
         } catch (jsError) {
           console.error('Custom JavaScript execution failed:', jsError.message);
+          this.logStep('custom.js.error', { message: jsError.message });
         }
       }
 
@@ -249,6 +333,7 @@ class PuppeteerFormChecker {
       this.lastFormSelector = formSelector;
 
       console.error(`Form found with selector: ${formSelector}`);
+      this.logStep('form.found', { selector: formSelector });
 
       // Execute custom actions before form filling
       if (customActions && customActions.length > 0) {
@@ -256,10 +341,13 @@ class PuppeteerFormChecker {
         for (const action of customActions) {
           try {
             await this.executeCustomAction(action);
+            this.logStep('custom.action.success', action);
           } catch (actionError) {
             console.error(`Custom action failed:`, actionError.message);
+            this.logStep('custom.action.error', { action, message: actionError.message });
           }
         }
+        this.logStep('custom.actions.complete');
       }
 
       // Check for CAPTCHA presence (monitor mode only)
@@ -280,21 +368,26 @@ class PuppeteerFormChecker {
       console.error('Attempting to submit form...');
       await this.submitFormAdvanced(formSelector);
       console.error('Form submission completed');
+      this.logStep('form.submitted');
 
       // Wait for response and check for form submission indicators
       console.error('Waiting for page response...');
       try {
-        await this.page.waitForNetworkIdle({ timeout: 30000 });
+        await this.page.waitForNetworkIdle({ timeout: networkIdleTimeout });
         console.error('Network is idle');
+        this.logStep('network.idle');
       } catch (networkError) {
         console.error('Network idle timeout, continuing...');
+        this.logStep('network.idle.timeout', { message: networkError.message });
       }
       
       try {
         await this.page.waitForFunction(() => document.readyState === 'complete', { timeout: 30000 });
         console.error('Page is fully loaded');
+        this.logStep('page.load.complete');
       } catch (loadError) {
         console.error('Page load timeout, continuing...');
+        this.logStep('page.load.timeout', { message: loadError.message });
       }
 
       // Additional wait for form processing
@@ -303,6 +396,7 @@ class PuppeteerFormChecker {
         await this.waitFor(3000); // Wait 3 seconds for form processing
       } catch (timeoutError) {
         console.error('Form processing wait timeout');
+        this.logStep('form.processing.timeout', { message: timeoutError.message });
       }
 
       // Get final HTML and URL
@@ -322,11 +416,13 @@ class PuppeteerFormChecker {
       }
 
       // Validate form submission
-      const submissionValidated = await this.validateFormSubmission(formSelector);
+      const validation = await this.validateFormSubmission(formSelector);
+      const submissionValidated = validation.validated;
       console.error(`Form submission validation: ${submissionValidated}`);
 
       // Classify result
-      const status = await this.classifyResult(successSelector, errorSelector);
+      const classification = await this.classifyResult(successSelector, errorSelector);
+      const status = classification.status;
 
       // Extract message
       const message = await this.extractMessage(successSelector, errorSelector);
@@ -334,25 +430,23 @@ class PuppeteerFormChecker {
       // Only mark as success if form submission was validated
       let finalSuccess = submissionValidated && status === 'success';
       let finalStatus = finalSuccess ? status : 'failure';
-      let finalMessage = finalSuccess ? message : 'Form submission failed or could not be validated';
+      let finalMessage = finalSuccess ? message : (classification.reason || 'Form submission failed or could not be validated');
       let captchaBlocking = false;
 
       if (this.captchaMonitorEnabled) {
-        captchaBlocking = captchaDetected ? await this.isCaptchaBlockingSubmission() : false;
+        const captchaOutcome = await this.evaluateCaptchaOutcome(captchaDetected);
+        captchaBlocking = captchaOutcome.blocking;
 
-        if (!captchaDetected) {
-          finalSuccess = false;
-          finalStatus = 'failure';
-          finalMessage = 'CAPTCHA was expected but not detected on the page';
-        } else if (captchaBlocking) {
-          finalSuccess = true;
-          finalStatus = 'success';
-          finalMessage = 'CAPTCHA blocked automated submission (expected behavior)';
-        } else {
-          finalSuccess = false;
-          finalStatus = 'failure';
-          finalMessage = 'CAPTCHA did not block submission';
-        }
+        finalSuccess = captchaOutcome.success;
+        finalStatus = captchaOutcome.status;
+        finalMessage = captchaOutcome.message;
+
+        this.logStep('captcha.monitor.result', {
+          captchaDetected,
+          captchaBlocking,
+          finalStatus,
+          reason: captchaOutcome.reason,
+        });
       }
       
       return {
@@ -371,6 +465,12 @@ class PuppeteerFormChecker {
           captchaExpected: this.captchaMonitorEnabled,
           captchaDetected,
           captchaBlocking,
+          validation,
+          classification,
+          http: {
+            navigation: navigationDetails,
+          },
+          steps: this.debugSteps,
           timestamp: new Date().toISOString()
         }
       };
@@ -403,6 +503,9 @@ class PuppeteerFormChecker {
           currentUrl,
           pageContent: pageContent.substring(0, 1000) + '...', // First 1000 chars
           screenshot: screenshot,
+          steps: this.debugSteps,
+          validation: this.validationLog,
+          classification: this.classificationLog,
           timestamp: new Date().toISOString()
         }
       };
@@ -424,6 +527,7 @@ class PuppeteerFormChecker {
 
   async detectAndSolveCaptcha() {
     try {
+      this.logStep('captcha.scan.start');
       // Check for various CAPTCHA types
       const captchaSelectors = [
         '.g-recaptcha',
@@ -440,22 +544,69 @@ class PuppeteerFormChecker {
         if (element) {
           console.error(`CAPTCHA found with selector: ${selector}`);
           captchaFound = true;
+          this.captchaDetails.selectors.push(selector);
+          this.logStep('captcha.selector.detected', { selector });
           break;
         }
       }
 
       if (captchaFound) {
         this.captchaDetected = true;
+        this.logStep('captcha.scan.result', { detected: true });
         return true;
       }
 
       this.captchaDetected = false;
+      this.logStep('captcha.scan.result', { detected: false });
       return false;
     } catch (error) {
       console.error('CAPTCHA detection/solving failed:', error.message);
       this.captchaDetected = false;
+      this.logStep('captcha.scan.error', { message: error.message });
       return false;
     }
+  }
+
+  async evaluateCaptchaOutcome(captchaDetected) {
+    if (!captchaDetected) {
+      return {
+        success: false,
+        status: 'failure',
+        message: 'CAPTCHA was expected but not detected on the page',
+        blocking: false,
+        reason: 'captcha_missing',
+      };
+    }
+
+    const blockingResult = await this.isCaptchaBlockingSubmission();
+
+    if (blockingResult.error) {
+      return {
+        success: false,
+        status: 'failure',
+        message: `CAPTCHA evaluation error: ${blockingResult.error}`,
+        blocking: null,
+        reason: 'captcha_check_error',
+      };
+    }
+
+    if (blockingResult.blocked) {
+      return {
+        success: true,
+        status: 'success',
+        message: 'CAPTCHA blocked automated submission (expected behavior)',
+        blocking: true,
+        reason: blockingResult.reason,
+      };
+    }
+
+    return {
+      success: false,
+      status: 'failure',
+      message: 'CAPTCHA did not block submission',
+      blocking: false,
+      reason: blockingResult.reason || 'captcha_not_blocking',
+    };
   }
 
   async isCaptchaBlockingSubmission() {
@@ -477,7 +628,7 @@ class PuppeteerFormChecker {
         'spam blocked',
       ];
 
-      const textIndicatesBlock = blockingPhrases.some((phrase) => pageText.includes(phrase));
+      const textIndicatesBlock = blockingPhrases.find((phrase) => pageText.includes(phrase));
 
       const captchaErrorSelectors = [
         '.wpcf7-spam-blocked',
@@ -487,14 +638,26 @@ class PuppeteerFormChecker {
         '.h-captcha-error',
       ];
 
-      const domIndicatesBlock = await this.page.evaluate((selectors) => {
-        return selectors.some((selector) => document.querySelector(selector));
+      const domMatch = await this.page.evaluate((selectors) => {
+        for (const selector of selectors) {
+          if (document.querySelector(selector)) {
+            return selector;
+          }
+        }
+        return null;
       }, captchaErrorSelectors);
 
-      return textIndicatesBlock || domIndicatesBlock;
+      if (textIndicatesBlock) {
+        return { blocked: true, reason: `phrase:${textIndicatesBlock}` };
+      }
+      if (domMatch) {
+        return { blocked: true, reason: `selector:${domMatch}` };
+      }
+
+      return { blocked: false, reason: 'no_blocking_indicators' };
     } catch (error) {
       console.error('Failed to determine CAPTCHA block status:', error.message);
-      return false;
+      return { blocked: null, error: error.message };
     }
   }
 
@@ -829,47 +992,21 @@ class PuppeteerFormChecker {
 
   async classifyResult(successSelector, errorSelector) {
     try {
-      // Check for success indicators
-      if (successSelector) {
-        const successElement = await this.page.$(successSelector);
-        if (successElement) {
-          console.error(`Success indicator found: ${successSelector}`);
-          return 'success';
-        }
-      }
-
-      // Check for error indicators
-      if (errorSelector) {
-        const errorElement = await this.page.$(errorSelector);
-        if (errorElement) {
-          console.error(`Error indicator found: ${errorSelector}`);
-          return 'failure';
-        }
-      }
-
-      // Check for common success/error patterns
-      const commonSuccessSelectors = [
+      const successSelectors = [
+        successSelector,
+        ...(this.validationRules.successSelectors || []),
         '.success',
         '.alert-success',
         '.message-success',
         '[class*="success"]',
         '.wpcf7-response-output:not(.wpcf7-validation-errors)',
         '.wpcf7-mail-sent-ok',
-        '.wpcf7-mail-sent-ng:not(.wpcf7-validation-errors)'
-      ];
+        '.wpcf7-mail-sent-ng:not(.wpcf7-validation-errors)',
+      ].filter(Boolean);
 
-      for (const selector of commonSuccessSelectors) {
-        const element = await this.page.$(selector);
-        if (element) {
-          const text = await element.textContent();
-          if (text && text.trim()) {
-            console.error(`Common success indicator found: ${selector} - "${text.trim()}"`);
-            return 'success';
-          }
-        }
-      }
-
-      const commonErrorSelectors = [
+      const errorSelectors = [
+        errorSelector,
+        ...(this.validationRules.errorSelectors || []),
         '.error',
         '.alert-error',
         '.alert-danger',
@@ -877,17 +1014,26 @@ class PuppeteerFormChecker {
         '[class*="error"]',
         '.wpcf7-validation-errors',
         '.wpcf7-spam-blocked',
-        '.wpcf7-mail-sent-ng'
-      ];
+        '.wpcf7-mail-sent-ng',
+      ].filter(Boolean);
 
-      for (const selector of commonErrorSelectors) {
-        const element = await this.page.$(selector);
-        if (element) {
-          const text = await element.textContent();
-          if (text && text.trim()) {
-            console.error(`Common error indicator found: ${selector} - "${text.trim()}"`);
-            return 'failure';
-          }
+      // Check for success indicators
+      for (const selector of successSelectors) {
+        const successElement = await this.page.$(selector);
+        if (successElement) {
+          const reason = `Success indicator found: ${selector}`;
+          console.error(reason);
+          return this.recordClassification('success', reason);
+        }
+      }
+
+      // Check for error indicators
+      for (const selector of errorSelectors) {
+        const errorElement = await this.page.$(selector);
+        if (errorElement) {
+          const reason = `Error indicator found: ${selector}`;
+          console.error(reason);
+          return this.recordClassification('failure', reason);
         }
       }
 
@@ -895,50 +1041,42 @@ class PuppeteerFormChecker {
       const formStillPresent = await this.page.$(this.lastFormSelector);
       if (formStillPresent) {
         console.error('Form is still present after submission attempt - likely failed');
-        return 'failure';
+        return this.recordClassification('failure', 'Form still present after submission attempt');
       }
 
       // Check for URL changes that might indicate success
       const currentUrl = this.page.url();
       if (currentUrl !== this.initialUrl) {
         console.error(`URL changed from ${this.initialUrl} to ${currentUrl} - possible success`);
-        return 'success';
+        return this.recordClassification('success', `URL changed to ${currentUrl}`);
       }
 
       // Check for common form submission success patterns
-      const submissionSuccess = await this.page.evaluate(() => {
-        // Look for any text that suggests successful submission
-        const pageText = document.body.innerText.toLowerCase();
-        const successPhrases = [
-          'thank you',
-          'message sent',
-          'form submitted',
-          'successfully',
-          'received',
-          'sent successfully',
-          'submitted successfully'
-        ];
-        
-        for (const phrase of successPhrases) {
-          if (pageText.includes(phrase)) {
-            return true;
-          }
-        }
-        
-        return false;
-      });
+      const submissionSuccess = await this.page.evaluate((phrases) => {
+        const pageText = document.body ? document.body.innerText.toLowerCase() : '';
+        return phrases.some((phrase) => pageText.includes(phrase));
+      }, [
+        'thank you',
+        'message sent',
+        'form submitted',
+        'successfully',
+        'received',
+        'sent successfully',
+        'submitted successfully',
+        ...this.validationRules.successPhrases,
+      ]);
       
       if (submissionSuccess) {
         console.error('Success phrases found in page text');
-        return 'success';
+        return this.recordClassification('success', 'Success phrases found after submission');
       }
 
       // If we can't determine, be conservative and assume failure
       console.error('Could not determine form submission result - assuming failure');
-      return 'failure';
+      return this.recordClassification('failure', 'Unable to determine submission outcome');
     } catch (error) {
       console.error('Result classification failed:', error.message);
-      return 'failure'; // Default to failure instead of success
+      return this.recordClassification('failure', `Classification error: ${error.message}`);
     }
   }
 
@@ -948,43 +1086,41 @@ class PuppeteerFormChecker {
       const formStillPresent = await this.page.$(formSelector);
       if (formStillPresent) {
         console.error('Form is still present after submission - likely failed');
-        return false;
+        return this.recordValidation(false, 'Form still present after submission');
       }
 
       // Check for URL changes
       const currentUrl = this.page.url();
       if (currentUrl !== this.initialUrl) {
+        const keywords = this.validationRules.urlChangeKeywords || [];
+        const keywordMatched = keywords.length === 0 || keywords.some((keyword) => currentUrl.includes(keyword));
         console.error(`URL changed from ${this.initialUrl} to ${currentUrl} - possible success`);
-        return true;
+        if (keywordMatched) {
+          return this.recordValidation(true, `URL changed to ${currentUrl}`);
+        }
+        this.recordValidation(false, `URL changed but keywords ${keywords.join(', ')} not found`);
       }
 
       // Check for form submission success messages
-      const successMessages = await this.page.evaluate(() => {
-        const pageText = document.body.innerText.toLowerCase();
-        const successPhrases = [
-          'thank you',
-          'message sent',
-          'form submitted',
-          'successfully',
-          'received',
-          'sent successfully',
-          'submitted successfully',
-          'email sent',
-          'contact form submitted'
-        ];
-        
-        for (const phrase of successPhrases) {
-          if (pageText.includes(phrase)) {
-            return true;
-          }
-        }
-        
-        return false;
-      });
+      const successMessages = await this.page.evaluate((phrases) => {
+        const pageText = document.body ? document.body.innerText.toLowerCase() : '';
+        return phrases.some((phrase) => pageText.includes(phrase));
+      }, [
+        'thank you',
+        'message sent',
+        'form submitted',
+        'successfully',
+        'received',
+        'sent successfully',
+        'submitted successfully',
+        'email sent',
+        'contact form submitted',
+        ...this.validationRules.successPhrases,
+      ]);
       
       if (successMessages) {
         console.error('Success messages found in page text');
-        return true;
+        return this.recordValidation(true, 'Success phrases detected after submission');
       }
 
       // Check for form reset or disappearance
@@ -1010,19 +1146,19 @@ class PuppeteerFormChecker {
       
       if (formInputs === 'form_gone') {
         console.error('Form disappeared after submission - likely success');
-        return true;
+        return this.recordValidation(true, 'Form disappeared after submission');
       }
       
       if (formInputs === 'form_cleared') {
         console.error('Form was cleared after submission - possible success');
-        return true;
+        return this.recordValidation(true, 'Form inputs cleared after submission');
       }
 
       console.error('Form submission validation failed - form still present with values');
-      return false;
+      return this.recordValidation(false, 'Form still present with user-entered values');
     } catch (error) {
       console.error('Form submission validation failed:', error.message);
-      return false;
+      return this.recordValidation(false, `Validation error: ${error.message}`);
     }
   }
 

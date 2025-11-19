@@ -53,7 +53,8 @@ SESSION_DRIVER=redis
 QUEUE_CONNECTION=redis
 BROADCAST_CONNECTION=redis
 BROADCAST_DRIVER=redis
-FILESYSTEM_DISK=local
+FILESYSTEM_DISK=public
+PUBLIC_DISK_DRIVER=local
 
 # =============================================================================
 # SESSION

@@ -187,6 +187,7 @@ class FormCheckService
 
         // Get the page
         $response = $this->httpClient->get($url);
+        $initialSnapshot = $this->snapshotHttpResponse($response);
         $html = $response->getBody()->getContents();
         $finalUrl = $url; // Use original URL for now
         
@@ -206,6 +207,7 @@ class FormCheckService
         
         // Submit the form
         $submitResponse = $this->submitForm($form, $formData, $formTarget);
+        $submitSnapshot = $this->snapshotHttpResponse($submitResponse);
         $submitHtml = $submitResponse->getBody()->getContents();
         $submitFinalUrl = $url; // Use original URL for now
         
@@ -218,6 +220,13 @@ class FormCheckService
             'final_url' => $submitFinalUrl,
             'message_excerpt' => $this->extractMessage($submitHtml, $formTarget),
             'html' => $submitHtml,
+            'debug_info' => [
+                'driver' => 'http',
+                'initial_response' => $initialSnapshot,
+                'submit_response' => $submitSnapshot,
+                'status' => $status,
+                'form_selector' => $formTarget->selector_value,
+            ],
         ];
     }
 
@@ -441,5 +450,22 @@ class FormCheckService
             'type' => $type,
             'path' => $filename,
         ]);
+    }
+
+    private function snapshotHttpResponse(\Psr\Http\Message\ResponseInterface $response): array
+    {
+        $headers = [];
+        foreach ($response->getHeaders() as $name => $values) {
+            $headers[$name] = implode(', ', array_slice($values, 0, 3));
+            if (count($headers) >= 25) {
+                break;
+            }
+        }
+
+        return [
+            'status' => $response->getStatusCode(),
+            'reason' => $response->getReasonPhrase(),
+            'headers' => $headers,
+        ];
     }
 }

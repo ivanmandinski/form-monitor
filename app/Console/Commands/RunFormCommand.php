@@ -15,7 +15,12 @@ class RunFormCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'forms:run {form : The ID of the form target to run}';
+    protected $signature = 'forms:test {form : The ID of the form target to run} {--json : Output machine-readable summary}';
+
+    /**
+     * @var array<int, string>
+     */
+    protected $aliases = ['forms:run'];
 
     /**
      * The console command description.
@@ -56,6 +61,10 @@ class RunFormCommand extends Command
             
             // Display results
             $this->displayResults($checkRun);
+
+            if ($this->option('json')) {
+                $this->line(json_encode($this->buildSummary($checkRun), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+            }
             
             return 0;
             
@@ -122,12 +131,52 @@ class RunFormCommand extends Command
         if ($artifacts->count() > 0) {
             $this->info("📎 Artifacts: {$artifacts->count()}");
             foreach ($artifacts as $artifact) {
-                $this->info("   • {$artifact->type}: http://localhost:8000/storage/{$artifact->path}");
+                $this->info("   • {$artifact->type}: " . $this->artifactUrl($artifact->path));
             }
         }
         
         // Check run details
         $this->info("📊 Check Run ID: {$checkRun->id}");
-        $this->info("🔍 View details: http://localhost:8000/admin/runs/{$checkRun->id}");
+        if ($runUrl = $this->adminRunUrl($checkRun->id)) {
+            $this->info("🔍 View details: {$runUrl}");
+        }
+    }
+
+    private function buildSummary(CheckRun $checkRun): array
+    {
+        return [
+            'run_id' => $checkRun->id,
+            'status' => $checkRun->status,
+            'driver' => $checkRun->driver,
+            'final_url' => $checkRun->final_url,
+            'message' => $checkRun->message_excerpt,
+            'error_detail' => $checkRun->error_detail,
+            'finished_at' => optional($checkRun->finished_at)->toDateTimeString(),
+            'artifacts' => $checkRun->artifacts->map(function ($artifact) {
+                return [
+                    'type' => $artifact->type,
+                    'path' => $artifact->path,
+                    'url' => $this->artifactUrl($artifact->path),
+                ];
+            })->all(),
+        ];
+    }
+
+    private function artifactUrl(?string $path): ?string
+    {
+        if (!$path) {
+            return null;
+        }
+
+        $base = rtrim(config('app.url') ?? '', '/');
+
+        return $base ? "{$base}/storage/{$path}" : "/storage/{$path}";
+    }
+
+    private function adminRunUrl(int $runId): ?string
+    {
+        $base = rtrim(config('app.url') ?? '', '/');
+
+        return $base ? "{$base}/admin/runs/{$runId}" : null;
     }
 }

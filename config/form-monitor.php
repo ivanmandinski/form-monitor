@@ -39,6 +39,32 @@ return [
         'log_artifacts' => env('FORM_MONITOR_LOG_ARTIFACTS', false),
         'redact_pii' => env('FORM_MONITOR_REDACT_PII', true),
     ],
+
+    'validation' => [
+        'success_selectors' => [
+            '.wpcf7-response-output.wpcf7-mail-sent-ok',
+            '.cf7-success',
+        ],
+        'error_selectors' => [
+            '.wpcf7-validation-errors',
+            '.cf7-error',
+            '.form-error',
+        ],
+        'success_phrases' => [
+            'your message has been sent',
+            'we will get back to you',
+        ],
+        'error_phrases' => [
+            'please fix the errors',
+            'invalid captcha',
+            'verification failed',
+        ],
+        'url_change_keywords' => [
+            '#thank',
+            'thank-you',
+            'success',
+        ],
+    ],
     
     'scheduling' => [
         'check_interval' => env('FORM_MONITOR_CHECK_INTERVAL', 60), // seconds
