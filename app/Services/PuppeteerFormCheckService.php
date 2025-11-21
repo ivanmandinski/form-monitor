@@ -4,9 +4,7 @@ namespace App\Services;
 
 use App\Models\FormTarget;
 use App\Models\CheckRun;
-use App\Models\CheckArtifact;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use Symfony\Component\Process\Process;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 
@@ -44,12 +42,42 @@ class PuppeteerFormCheckService
                 'result_keys' => array_keys($result),
             ]);
 
+            $errorDetail = null;
+            if (!($result['success'] ?? false)) {
+                $errorDetail = [
+                    'error' => $result['error'] ?? null,
+                    'message' => $result['message'] ?? null,
+                    'status' => $result['status'] ?? null,
+                ];
+
+                if (empty($errorDetail['error'])) {
+                    $errorDetail['error'] = $errorDetail['message'] ?? 'Unknown error';
+                }
+
+                $classificationReason = data_get($result, 'debugInfo.classification.reason');
+                $validationReason = data_get($result, 'debugInfo.validation.reason');
+
+                if ($classificationReason) {
+                    $errorDetail['reason'] = $classificationReason;
+                } elseif ($validationReason) {
+                    $errorDetail['reason'] = $validationReason;
+                }
+
+                if (array_key_exists('captchaDetected', $result)) {
+                    $errorDetail['captcha_detected'] = (bool) $result['captchaDetected'];
+                }
+
+                if (data_get($result, 'debugInfo.captchaBlocking') !== null) {
+                    $errorDetail['captcha_blocking'] = data_get($result, 'debugInfo.captchaBlocking');
+                }
+            }
+
             // Return result data in format expected by FormCheckService
             return [
                 'status' => $this->mapStatus($result['status'] ?? 'unknown'),
                 'final_url' => $result['finalUrl'] ?? null,
                 'message_excerpt' => $result['message'] ?? null,
-                'error_detail' => $result['success'] ? null : ['error' => $result['error'] ?? 'Unknown error'],
+                'error_detail' => $errorDetail,
                 'html' => $result['html'] ?? null,
                 'debug_info' => $result['debugInfo'] ?? null,
             ];
@@ -248,57 +276,6 @@ class PuppeteerFormCheckService
         };
     }
 
-    private function storeArtifact(CheckRun $checkRun, string $type, string $content, bool $isBase64 = false): void
-    {
-        try {
-            $extension = match($type) {
-                'html' => 'html',
-                'debug_info' => 'json',
-                'screenshot' => 'png',
-                default => 'txt',
-            };
-            
-            $filename = 'artifacts/' . uniqid() . '_' . $checkRun->id . '_' . $type . '.' . $extension;
-            
-            if ($isBase64) {
-                // Decode base64 content for images
-                $binaryContent = base64_decode($content);
-                Storage::disk('public')->put($filename, $binaryContent);
-            } else {
-                // Store as-is for HTML, JSON, or text
-                Storage::disk('public')->put($filename, $content);
-            }
-            
-            // Verify the file was actually created before creating the database record
-            if (!Storage::disk('public')->exists($filename)) {
-                throw new \Exception("Failed to create artifact file: {$filename}");
-            }
-            
-            // Only create database record if file was successfully created
-            CheckArtifact::create([
-                'check_run_id' => $checkRun->id,
-                'type' => $type,
-                'path' => $filename,
-            ]);
-            
-            Log::info('Artifact stored successfully', [
-                'check_run_id' => $checkRun->id,
-                'type' => $type,
-                'filename' => $filename,
-                'file_size' => Storage::disk('public')->size($filename),
-            ]);
-            
-        } catch (\Exception $e) {
-            Log::error('Failed to store artifact', [
-                'check_run_id' => $checkRun->id,
-                'type' => $type,
-                'error' => $e->getMessage(),
-            ]);
-            
-            // Re-throw the exception so the calling method can handle it
-            throw $e;
-        }
-    }
 
     public function isAvailable(): bool
     {

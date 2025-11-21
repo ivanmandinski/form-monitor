@@ -21,6 +21,7 @@ class CheckRunResource extends JsonResource
             'final_url' => $this->final_url,
             'message_excerpt' => $this->message_excerpt,
             'error_detail' => $this->error_detail,
+            'debug_info' => $this->debug_info,
             'started_at' => $this->started_at?->toISOString(),
             'finished_at' => $this->finished_at?->toISOString(),
             'duration_seconds' => $this->started_at && $this->finished_at 
@@ -29,7 +30,6 @@ class CheckRunResource extends JsonResource
             'is_successful' => $this->isSuccessful(),
             'is_blocked' => $this->isBlocked(),
             'is_error' => $this->isError(),
-            'artifacts' => CheckArtifactResource::collection($this->whenLoaded('artifacts')),
             'form_target' => new FormTargetResource($this->whenLoaded('formTarget')),
         ];
     }

@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\FormTarget;
 use App\Models\CheckRun;
-use App\Models\CheckArtifact;
 use App\Services\PuppeteerFormCheckService;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
@@ -12,7 +11,6 @@ use Symfony\Component\DomCrawler\Crawler;
 use Symfony\Component\CssSelector\CssSelectorConverter;
 use Laravel\Dusk\Browser;
 use Laravel\Dusk\Chrome\ChromeProcess;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 
 class FormCheckService
@@ -91,19 +89,9 @@ class FormCheckService
                 'final_url' => $result['final_url'] ?? null,
                 'message_excerpt' => $result['message_excerpt'] ?? null,
                 'error_detail' => $result['error_detail'] ?? null,
+                'debug_info' => $result['debug_info'] ?? null,
                 'finished_at' => now(),
             ]);
-
-            // Store artifacts
-            if (isset($result['html'])) {
-                $this->storeArtifact($checkRun, 'html', $result['html']);
-            }
-            if (isset($result['screenshot'])) {
-                $this->storeArtifact($checkRun, 'screenshot', $result['screenshot']);
-            }
-            if (isset($result['debug_info'])) {
-                $this->storeArtifact($checkRun, CheckArtifact::TYPE_DEBUG_INFO, json_encode($result['debug_info']));
-            }
 
         } catch (\Exception $e) {
             Log::error('Form check failed', [
@@ -429,28 +417,6 @@ class FormCheckService
         return $filename;
     }
 
-    private function storeArtifact(CheckRun $checkRun, string $type, string $content): void
-    {
-        $disk = Storage::disk('public');
-
-        $filename = match ($type) {
-            CheckArtifact::TYPE_HTML => 'artifacts/' . uniqid() . '_' . $checkRun->id . '_html.html',
-            CheckArtifact::TYPE_DEBUG_INFO => 'artifacts/' . uniqid() . '_' . $checkRun->id . '_debug.json',
-            default => $content,
-        };
-
-        if ($type === CheckArtifact::TYPE_HTML) {
-            $disk->put($filename, $content);
-        } elseif ($type === CheckArtifact::TYPE_DEBUG_INFO) {
-            $disk->put($filename, $content);
-        }
-
-        CheckArtifact::create([
-            'check_run_id' => $checkRun->id,
-            'type' => $type,
-            'path' => $filename,
-        ]);
-    }
 
     private function snapshotHttpResponse(\Psr\Http\Message\ResponseInterface $response): array
     {

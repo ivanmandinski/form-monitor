@@ -106,7 +106,7 @@
                                         </svg>
                                         View
                                     </a>
-                                    <form action="{{ route('admin.runs.destroy', $run) }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete this check run? This will also delete all associated artifacts and cannot be undone.')">
+                                    <form action="{{ route('admin.runs.destroy', $run) }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete this check run? This cannot be undone.')">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="inline-flex items-center px-3 py-2 border border-red-300 shadow-sm text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-200">

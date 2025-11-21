@@ -153,6 +153,16 @@
                        </div>
                    </div>
                    @endif
+
+                   <!-- Debug Info -->
+                   @if($run->debug_info)
+                   <div class="mb-8">
+                       <h4 class="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">Debug Info</h4>
+                       <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                           <pre class="text-sm text-red-800 whitespace-pre-wrap">{{ json_encode($run->debug_info, JSON_PRETTY_PRINT) }}</pre>
+                       </div>
+                   </div>
+                   @endif
             
             <!-- Message Excerpt -->
             @if($run->message_excerpt)
@@ -176,49 +186,9 @@
             </div>
             @endif
             
-            <!-- Artifacts -->
-            @if($run->artifacts->count() > 0)
-            <div class="mb-8">
-                <h4 class="text-sm font-medium text-gray-500 uppercase tracking-wide mb-3">Artifacts</h4>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    @foreach($run->artifacts as $artifact)
-                    <div class="border border-gray-200 rounded-lg p-4">
-                        <div class="flex items-center justify-between mb-2">
-                            <span class="text-sm font-medium text-gray-900 capitalize">{{ $artifact->type }}</span>
-                            <span class="text-xs text-gray-500">{{ $artifact->created_at->format('M j, g:i A') }}</span>
-                        </div>
-                        
-                        @if($artifact->type === 'html')
-                            <div class="bg-gray-50 rounded p-3 max-h-40 overflow-y-auto">
-                                <pre class="text-xs text-gray-700 whitespace-pre-wrap">{{ Str::limit($artifact->content, 500) }}</pre>
-                            </div>
-                            <a href="{{ $artifact->url }}" target="_blank" class="text-xs text-blue-600 hover:text-blue-800 mt-2 inline-block">
-                                View Full HTML
-                            </a>
-                        @elseif($artifact->type === 'screenshot')
-                            <div class="bg-gray-50 rounded p-3">
-                                <img src="{{ $artifact->url }}" alt="Screenshot" class="max-w-full h-auto rounded">
-                            </div>
-                            <a href="{{ $artifact->url }}" target="_blank" class="text-xs text-blue-600 hover:text-blue-800 mt-2 inline-block">
-                                View Full Size
-                            </a>
-                        @elseif($artifact->type === 'debug_info')
-                            <div class="bg-gray-50 rounded p-3 max-h-40 overflow-y-auto">
-                                <pre class="text-xs text-gray-700 whitespace-pre-wrap">{{ Str::limit($artifact->content, 500) }}</pre>
-                            </div>
-                            <a href="{{ $artifact->url }}" target="_blank" class="text-xs text-blue-600 hover:text-blue-800 mt-2 inline-block">
-                                View Debug Info
-                            </a>
-                        @endif
-                    </div>
-                    @endforeach
-                </div>
-            </div>
-            @endif
-            
             <!-- Actions -->
             <div class="flex justify-end space-x-3 pt-6 border-t border-gray-200">
-                <form action="{{ route('admin.runs.destroy', $run) }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete this check run? This will also delete all associated artifacts and cannot be undone.')">
+                <form action="{{ route('admin.runs.destroy', $run) }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete this check run? This cannot be undone.')">
                     @csrf
                     @method('DELETE')
                     <button type="submit" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium">
