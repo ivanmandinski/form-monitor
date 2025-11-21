@@ -421,18 +421,29 @@ class PuppeteerFormChecker {
 
       if (this.captchaMonitorEnabled) {
         const captchaOutcome = await this.evaluateCaptchaOutcome(captchaDetected);
-        captchaBlocking = captchaOutcome.blocking;
+        
+        // Only override result if CAPTCHA was detected and evaluated
+        if (captchaOutcome !== null) {
+          captchaBlocking = captchaOutcome.blocking;
+          finalSuccess = captchaOutcome.success;
+          finalStatus = captchaOutcome.status;
+          finalMessage = captchaOutcome.message;
 
-        finalSuccess = captchaOutcome.success;
-        finalStatus = captchaOutcome.status;
-        finalMessage = captchaOutcome.message;
-
-        this.logStep('captcha.monitor.result', {
-          captchaDetected,
-          captchaBlocking,
-          finalStatus,
-          reason: captchaOutcome.reason,
-        });
+          this.logStep('captcha.monitor.result', {
+            captchaDetected,
+            captchaBlocking,
+            finalStatus,
+            reason: captchaOutcome.reason,
+          });
+        } else {
+          // CAPTCHA not detected - continue with normal form testing
+          this.logStep('captcha.monitor.result', {
+            captchaDetected: false,
+            captchaBlocking: false,
+            finalStatus,
+            reason: 'captcha_not_detected_continuing_normal_test',
+          });
+        }
       }
       
       return {
@@ -554,14 +565,9 @@ class PuppeteerFormChecker {
   }
 
   async evaluateCaptchaOutcome(captchaDetected) {
+    // If CAPTCHA is not detected, return null to continue with normal form testing
     if (!captchaDetected) {
-      return {
-        success: false,
-        status: 'failure',
-        message: 'CAPTCHA was expected but not detected on the page',
-        blocking: false,
-        reason: 'captcha_missing',
-      };
+      return null;
     }
 
     const blockingResult = await this.isCaptchaBlockingSubmission();
@@ -576,6 +582,7 @@ class PuppeteerFormChecker {
       };
     }
 
+    // If CAPTCHA blocks submission, mark as SUCCESS (expected behavior)
     if (blockingResult.blocked) {
       return {
         success: true,
@@ -586,6 +593,7 @@ class PuppeteerFormChecker {
       };
     }
 
+    // If CAPTCHA is detected but doesn't block, mark as FAILURE (security issue)
     return {
       success: false,
       status: 'failure',
