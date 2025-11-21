@@ -25,6 +25,7 @@ class CheckRun extends Model
         'final_url',
         'message_excerpt',
         'error_detail',
+        'debug_info',
         'started_at',
         'finished_at',
     ];
@@ -32,6 +33,7 @@ class CheckRun extends Model
     protected $casts = [
         'http_status' => 'integer',
         'error_detail' => 'array',
+        'debug_info' => 'array',
         'started_at' => 'datetime',
         'finished_at' => 'datetime',
     ];

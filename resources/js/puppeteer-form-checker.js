@@ -2,7 +2,6 @@
 
 import puppeteer from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
-import RecaptchaPlugin from 'puppeteer-extra-plugin-recaptcha';
 import AdblockerPlugin from 'puppeteer-extra-plugin-adblocker';
 import UserDataDirPlugin from 'puppeteer-extra-plugin-user-data-dir';
 import UserPreferencesPlugin from 'puppeteer-extra-plugin-user-preferences';
@@ -25,21 +24,8 @@ puppeteer.use(UserPreferencesPlugin({
   }
 }));
 
-// Add recaptcha plugin with multiple solver providers
-puppeteer.use(
-  RecaptchaPlugin({
-    provider: {
-      id: '2captcha',
-      token: process.env.CAPTCHA_SOLVER_API_KEY || 'DEMO_KEY'
-    },
-    visualFeedback: true,
-    solveScoreBased: true,
-    solveInactiveChallenges: true,
-    solveRecaptchaV3: true,
-    solveRecaptchaV2: true,
-    solveHCaptcha: true
-  })
-);
+// NOTE: CAPTCHA solver plugins are intentionally disabled.
+// We only detect CAPTCHA presence/blocking to respect user sites.
 
 class PuppeteerFormChecker {
   constructor() {
