@@ -47,4 +47,13 @@ class CheckArtifact extends Model
     {
         return Storage::disk('public')->url($this->path);
     }
+
+    public function getContentAttribute(): ?string
+    {
+        if (!$this->path || !Storage::disk('public')->exists($this->path)) {
+            return null;
+        }
+
+        return Storage::disk('public')->get($this->path);
+    }
 }
