@@ -155,11 +155,19 @@
                    @endif
 
                    <!-- Debug Info -->
-                   @if($run->debug_info)
+                   @php
+                       $debugInfoArtifact = $run->artifacts->firstWhere('type', 'debug_info');
+                       $debugInfoContent = null;
+                       if ($debugInfoArtifact && $debugInfoArtifact->content) {
+                           $decoded = json_decode($debugInfoArtifact->content, true);
+                           $debugInfoContent = $decoded !== null ? json_encode($decoded, JSON_PRETTY_PRINT) : $debugInfoArtifact->content;
+                       }
+                   @endphp
+                   @if($debugInfoContent)
                    <div class="mb-8">
                        <h4 class="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">Debug Info</h4>
                        <div class="bg-red-50 border border-red-200 rounded-lg p-4">
-                           <pre class="text-sm text-red-800 whitespace-pre-wrap">{{ json_encode($run->debug_info, JSON_PRETTY_PRINT) }}</pre>
+                           <pre class="text-sm text-red-800 whitespace-pre-wrap">{{ $debugInfoContent }}</pre>
                        </div>
                    </div>
                    @endif

@@ -276,7 +276,6 @@ class PuppeteerFormCheckService
         };
     }
 
-
     public function isAvailable(): bool
     {
         try {
