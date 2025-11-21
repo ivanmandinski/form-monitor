@@ -105,7 +105,7 @@
                         <input type="number" name="cleanup_days" id="cleanup_days" min="1" max="365"
                                value="30"
                                class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                        <p class="mt-1 text-xs text-gray-500">Automatically clean up old check runs and artifacts</p>
+                        <p class="mt-1 text-xs text-gray-500">Automatically clean up old check runs</p>
                     </div>
                 </div>
             </div>
