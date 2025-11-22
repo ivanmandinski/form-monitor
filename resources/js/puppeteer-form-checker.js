@@ -347,7 +347,8 @@ class PuppeteerFormChecker {
         console.error(`Filling ${fieldMappings.length} form fields...`);
         await this.fillFormFieldsAdvanced(fieldMappings);
       } else {
-        console.error('No form fields to fill');
+        console.error('No form fields to fill - attempting Smart Auto-Fill...');
+        await this.autoFillForm(formSelector);
       }
 
       // Submit form with advanced methods
@@ -1238,6 +1239,102 @@ class PuppeteerFormChecker {
       .replace(/%TEXT%/g, `This is a test message generated at ${new Date().toISOString()} (ID: ${randomId})`)
       .replace(/%TIMESTAMP%/g, timestamp.toString())
       .replace(/%RANDOM%/g, randomId.toString());
+  }
+
+  async autoFillForm(formSelector) {
+    try {
+      // Find all visible inputs, textareas, and selects within the form
+      const elements = await this.page.$$(
+        `${formSelector} input:not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="reset"]), ${formSelector} textarea, ${formSelector} select`
+      );
+
+      console.error(`Found ${elements.length} potential fields to auto-fill`);
+
+      for (const element of elements) {
+        try {
+          const isVisible = await element.isVisible();
+          const isEnabled = await element.isEnabled();
+
+          if (!isVisible || !isEnabled) continue;
+
+          // Get element attributes for heuristics
+          const tagName = await element.evaluate(el => el.tagName.toLowerCase());
+          const type = await element.evaluate(el => el.type || '');
+          const name = await element.evaluate(el => el.name || '');
+          const id = await element.evaluate(el => el.id || '');
+          const placeholder = await element.evaluate(el => el.placeholder || '');
+
+          // Combine attributes for matching
+          const attributes = `${name} ${id} ${type} ${placeholder}`.toLowerCase();
+
+          let valueToFill = null;
+
+          // Heuristics
+          if (tagName === 'select') {
+            // For select, choose the second option (often the first valid one) or first if only one
+            await element.evaluate(el => {
+              if (el.options.length > 1) {
+                el.selectedIndex = 1;
+              } else if (el.options.length > 0) {
+                el.selectedIndex = 0;
+              }
+              el.dispatchEvent(new Event('change', { bubbles: true }));
+            });
+            console.error(`Auto-filled select: ${name || id}`);
+            continue;
+          } else if (type === 'checkbox') {
+            // Check checkboxes (often terms of service)
+            const isChecked = await element.evaluate(el => el.checked);
+            if (!isChecked) {
+              await element.click();
+              console.error(`Auto-checked checkbox: ${name || id}`);
+            }
+            continue;
+          } else if (type === 'radio') {
+            // Click radio if not checked
+            const isChecked = await element.evaluate(el => el.checked);
+            if (!isChecked) {
+              await element.click();
+              console.error(`Auto-selected radio: ${name || id}`);
+            }
+            continue;
+          }
+
+          // Text-based inputs
+          if (attributes.includes('email') || attributes.includes('mail')) {
+            valueToFill = '%EMAIL%';
+          } else if (attributes.includes('phone') || attributes.includes('tel') || attributes.includes('mobile') || attributes.includes('number')) {
+            valueToFill = '%PHONE%';
+          } else if (attributes.includes('name') || attributes.includes('first') || attributes.includes('last') || attributes.includes('full')) {
+            valueToFill = '%NAME%';
+          } else if (tagName === 'textarea' || attributes.includes('message') || attributes.includes('comment') || attributes.includes('body') || attributes.includes('desc')) {
+            valueToFill = '%TEXT%';
+          } else if (attributes.includes('date')) {
+            // Simple date fallback
+            valueToFill = new Date().toISOString().split('T')[0];
+          } else {
+            // Default fallback
+            valueToFill = 'Test Value %RANDOM%';
+          }
+
+          if (valueToFill) {
+            const processedValue = this.processValue(valueToFill);
+
+            // Clear and type
+            await element.click({ clickCount: 3 });
+            await this.page.keyboard.press('Backspace');
+            await element.type(processedValue, { delay: 50 });
+
+            console.error(`Auto-filled ${name || id} (${type}) with: ${processedValue}`);
+          }
+
+        } catch (elError) {
+          console.error('Error auto-filling element:', elError.message);
+        }
+      }
+    } catch (error) {
+      console.error('Auto-fill failed:', error.message);
+    }
   }
 }
 
