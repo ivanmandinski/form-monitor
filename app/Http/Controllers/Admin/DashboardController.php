@@ -29,6 +29,7 @@ class DashboardController extends Controller
         $totalTargets = \App\Models\Target::count();
         $totalForms = \App\Models\FormTarget::count();
         $totalRuns = CheckRun::count();
+        $successfulRuns = CheckRun::where('status', 'success')->count();
             
         $successRate = $totalChecks > 0 ? round(($successfulChecks / $totalChecks) * 100, 1) : 0;
         
@@ -62,7 +63,8 @@ class DashboardController extends Controller
             'recentRuns',
             'totalTargets',
             'totalForms',
-            'totalRuns'
+            'totalRuns',
+            'successfulRuns'
         ));
     }
 }
