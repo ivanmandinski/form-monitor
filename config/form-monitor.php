@@ -40,6 +40,10 @@ return [
         'redact_pii' => env('FORM_MONITOR_REDACT_PII', true),
     ],
 
+    'notifications' => [
+        'mail_to' => env('FORM_MONITOR_NOTIFICATIONS_MAIL_TO', null),
+    ],
+
     'validation' => [
         'success_selectors' => [
             '.wpcf7-response-output.wpcf7-mail-sent-ok',

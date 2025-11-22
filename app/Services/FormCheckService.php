@@ -12,6 +12,8 @@ use Symfony\Component\CssSelector\CssSelectorConverter;
 use Laravel\Dusk\Browser;
 use Laravel\Dusk\Chrome\ChromeProcess;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\FormCheckFailed;
 
 class FormCheckService
 {
@@ -108,6 +110,18 @@ class FormCheckService
                 ],
                 'finished_at' => now(),
             ]);
+        }
+
+        if ($checkRun->status === 'failure' || $checkRun->status === 'error') {
+            try {
+                $recipient = config('form-monitor.notifications.mail_to') ?? config('mail.from.address');
+                if ($recipient) {
+                    Mail::to($recipient)->send(new FormCheckFailed($checkRun));
+                    Log::info('Failure notification sent', ['run_id' => $checkRun->id, 'to' => $recipient]);
+                }
+            } catch (\Exception $e) {
+                Log::error('Failed to send notification email', ['error' => $e->getMessage()]);
+            }
         }
 
         return $checkRun;

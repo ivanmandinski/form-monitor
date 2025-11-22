@@ -24,6 +24,11 @@ class DashboardController extends Controller
         $failedChecks = CheckRun::where('created_at', '>=', $last24h)
             ->where('status', 'failure')
             ->count();
+
+        // Overall stats for the view
+        $totalTargets = \App\Models\Target::count();
+        $totalForms = \App\Models\FormTarget::count();
+        $totalRuns = CheckRun::count();
             
         $successRate = $totalChecks > 0 ? round(($successfulChecks / $totalChecks) * 100, 1) : 0;
         
@@ -38,7 +43,7 @@ class DashboardController extends Controller
                 return $run->finished_at->diffInSeconds($run->started_at);
             }) ?? 0;
             
-        $activeForms = FormTarget::where('is_active', true)->count();
+        $activeForms = FormTarget::where('schedule_enabled', true)->count();
         
         // Recent runs
         $recentRuns = CheckRun::with('formTarget.target')
@@ -53,7 +58,11 @@ class DashboardController extends Controller
             'successRate',
             'avgDuration',
             'activeForms',
-            'recentRuns'
+            'activeForms',
+            'recentRuns',
+            'totalTargets',
+            'totalForms',
+            'totalRuns'
         ));
     }
 }
