@@ -593,14 +593,9 @@ class PuppeteerFormChecker {
       };
     }
 
-    // If CAPTCHA is detected but doesn't block, mark as FAILURE (security issue)
-    return {
-      success: false,
-      status: 'failure',
-      message: 'CAPTCHA did not block submission',
-      blocking: false,
-      reason: blockingResult.reason || 'captcha_not_blocking',
-    };
+    // If CAPTCHA is detected but doesn't block, return null to continue with normal form testing
+    // This ensures we don't mark a failed form as success just because a CAPTCHA was present
+    return null;
   }
 
   async isCaptchaBlockingSubmission() {

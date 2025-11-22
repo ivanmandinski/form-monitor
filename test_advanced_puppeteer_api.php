@@ -60,16 +60,18 @@ class AdvancedPuppeteerAPITest
     /**
      * Make HTTP request
      */
-    private function makeRequest(string $method, string $endpoint, string $data = null): array
+    private function makeRequest(string $method, string $endpoint, ?string $data = null): array
     {
         $url = $this->baseUrl . $endpoint;
         
+        $headers = isset($this->headers) ? $this->headers : ['Content-Type: application/json', 'Accept: application/json'];
+
         $ch = curl_init();
         curl_setopt_array($ch, [
             CURLOPT_URL => $url,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_CUSTOMREQUEST => $method,
-            CURLOPT_HTTPHEADER => $this->headers,
+            CURLOPT_HTTPHEADER => $headers,
             CURLOPT_TIMEOUT => 120, // Increased timeout for Puppeteer
             CURLOPT_SSL_VERIFYPEER => false,
         ]);
