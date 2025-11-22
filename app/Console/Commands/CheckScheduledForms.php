@@ -78,10 +78,9 @@ class CheckScheduledForms extends Command
     
     private function dispatchCheckJob(FormTarget $form): void
     {
-        // For now, run synchronously. In production, this should dispatch a job to the queue
-        $this->formCheckService->checkForm($form);
+        // Dispatch the job to the queue
+        \App\Jobs\CheckFormJob::dispatch($form);
         
-        // TODO: Implement queue dispatch
-        // dispatch(new CheckFormJob($form));
+        $this->info("Dispatched check job for form {$form->id}");
     }
 }

@@ -36,6 +36,7 @@
                     <div>
                         <label for="email_notifications" class="flex items-center">
                             <input type="checkbox" name="email_notifications" id="email_notifications" value="1" 
+                                   {{ $settings['email_notifications'] ? 'checked' : '' }}
                                    class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
                             <span class="ml-2 text-sm text-gray-700">Enable email notifications</span>
                         </label>
@@ -45,7 +46,7 @@
                     <div>
                         <label for="notification_email" class="block text-sm font-medium text-gray-700">Notification Email</label>
                         <input type="email" name="notification_email" id="notification_email" 
-                               value="admin@example.com"
+                               value="{{ $settings['notification_email'] }}"
                                class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500">
                         <p class="mt-1 text-xs text-gray-500">Email address for receiving notifications</p>
                     </div>
@@ -63,7 +64,7 @@
                     <div>
                         <label for="default_timeout" class="block text-sm font-medium text-gray-700">Default Timeout (seconds)</label>
                         <input type="number" name="default_timeout" id="default_timeout" min="10" max="300"
-                               value="30"
+                               value="{{ $settings['default_timeout'] }}"
                                class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500">
                         <p class="mt-1 text-xs text-gray-500">Maximum time to wait for form submission</p>
                     </div>
@@ -71,7 +72,7 @@
                     <div>
                         <label for="max_retries" class="block text-sm font-medium text-gray-700">Maximum Retries</label>
                         <input type="number" name="max_retries" id="max_retries" min="0" max="5"
-                               value="2"
+                               value="{{ $settings['max_retries'] }}"
                                class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500">
                         <p class="mt-1 text-xs text-gray-500">Number of retry attempts for failed checks</p>
                     </div>
@@ -92,10 +93,10 @@
                     <div>
                         <label for="log_level" class="block text-sm font-medium text-gray-700">Log Level</label>
                         <select name="log_level" id="log_level" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                            <option value="debug">Debug</option>
-                            <option value="info" selected>Info</option>
-                            <option value="warning">Warning</option>
-                            <option value="error">Error</option>
+                            <option value="debug" {{ $settings['log_level'] == 'debug' ? 'selected' : '' }}>Debug</option>
+                            <option value="info" {{ $settings['log_level'] == 'info' ? 'selected' : '' }}>Info</option>
+                            <option value="warning" {{ $settings['log_level'] == 'warning' ? 'selected' : '' }}>Warning</option>
+                            <option value="error" {{ $settings['log_level'] == 'error' ? 'selected' : '' }}>Error</option>
                         </select>
                         <p class="mt-1 text-xs text-gray-500">Level of detail for application logging</p>
                     </div>
@@ -103,7 +104,7 @@
                     <div>
                         <label for="cleanup_days" class="block text-sm font-medium text-gray-700">Cleanup After (days)</label>
                         <input type="number" name="cleanup_days" id="cleanup_days" min="1" max="365"
-                               value="30"
+                               value="{{ $settings['cleanup_days'] }}"
                                class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500">
                         <p class="mt-1 text-xs text-gray-500">Automatically clean up old check runs</p>
                     </div>
