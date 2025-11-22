@@ -101,36 +101,25 @@
 
     <!-- KPI Cards -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
-        @php
-            $totalTargets = \App\Models\Target::count();
-            $totalForms = \App\Models\FormTarget::count();
-            $totalRuns = \App\Models\CheckRun::count();
-            $successfulRuns = \App\Models\CheckRun::where('status', 'success')->count();
-            $successRate = $totalRuns > 0 ? round(($successfulRuns / $totalRuns) * 100, 1) : 0;
-        @endphp
+        <!-- Stats provided by DashboardController -->
 
         <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg hover:shadow-md transition-shadow duration-200">
             <div class="p-4 sm:p-6">
                 <div class="flex items-center">
                     <div class="flex-shrink-0">
-                        <div class="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                        <div class="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-teal-500 to-teal-600 rounded-lg flex items-center justify-center">
                             <svg class="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                         </div>
                     </div>
                     <div class="ml-3 sm:ml-4">
-                        <p class="text-sm font-medium text-gray-600">Total Targets</p>
-                        <p class="text-2xl sm:text-3xl font-bold text-gray-900">{{ $totalTargets }}</p>
+                        <p class="text-sm font-medium text-gray-600">Avg Response Time</p>
+                        <p class="text-2xl sm:text-3xl font-bold text-gray-900">{{ number_format($avgDuration, 2) }}s</p>
                     </div>
                 </div>
                 <div class="mt-3 sm:mt-4">
-                    <a href="{{ route('admin.targets.index') }}" class="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center">
-                        View all targets
-                        <svg class="w-4 h-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                        </svg>
-                    </a>
+                    <p class="text-xs text-gray-500">Average duration of checks in last 24h</p>
                 </div>
             </div>
         </div>
@@ -228,12 +217,7 @@
                 </div>
             </div>
             <div class="p-4 sm:p-6">
-                @php
-                    $recentRuns = \App\Models\CheckRun::with('formTarget.target')
-                        ->latest()
-                        ->take(5)
-                        ->get();
-                @endphp
+                <!-- Recent runs provided by controller -->
                 
                 @if($recentRuns->count() > 0)
                     <div class="space-y-3 sm:space-y-4">

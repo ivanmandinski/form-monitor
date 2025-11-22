@@ -44,7 +44,7 @@ Route::get('/debug-role', function () {
 
 // Admin routes - all authenticated users have access
 Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () {
-    Route::view('dashboard', 'admin.dashboard')->name('dashboard');
+    Route::get('dashboard', [App\Http\Controllers\Admin\DashboardController::class, 'index'])->name('dashboard');
     
     // Targets
     Route::resource('targets', TargetController::class);

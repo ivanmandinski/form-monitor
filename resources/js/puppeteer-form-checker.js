@@ -667,7 +667,10 @@ class PuppeteerFormChecker {
   async fillFormFieldsAdvanced(fieldMappings) {
     for (const mapping of fieldMappings) {
       try {
-        const { selector, value, type = 'text', clearFirst = true, delay = 100 } = mapping;
+        const { selector, value: rawValue, type = 'text', clearFirst = true, delay = 100 } = mapping;
+
+        // Process value for random placeholders
+        const value = this.processValue(rawValue);
 
         // Try different selector strategies
         const selectors = [
@@ -1218,6 +1221,23 @@ class PuppeteerFormChecker {
     } catch (error) {
       console.error('Cleanup failed:', error.message);
     }
+  }
+
+  processValue(value) {
+    if (typeof value !== 'string') return value;
+
+    const timestamp = Date.now();
+    const randomId = Math.floor(Math.random() * 10000);
+
+    return value
+      .replace(/%EMAIL%/g, `test.user.${timestamp}.${randomId}@example.com`)
+      .replace(/%NAME%/g, `Test User ${randomId}`)
+      .replace(/%FIRST_NAME%/g, `Test`)
+      .replace(/%LAST_NAME%/g, `User ${randomId}`)
+      .replace(/%PHONE%/g, `555${String(randomId).padStart(4, '0')}`)
+      .replace(/%TEXT%/g, `This is a test message generated at ${new Date().toISOString()} (ID: ${randomId})`)
+      .replace(/%TIMESTAMP%/g, timestamp.toString())
+      .replace(/%RANDOM%/g, randomId.toString());
   }
 }
 
