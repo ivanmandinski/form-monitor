@@ -169,15 +169,15 @@ class PuppeteerFormChecker {
     }
 
     this.browser = await puppeteer.launch(launchOptions);
-    
+
     this.page = await this.browser.newPage();
-    
+
     // Set realistic user agent
     await this.page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-    
+
     // Set viewport to common desktop resolution
-    await this.page.setViewport({ 
-      width: 1366, 
+    await this.page.setViewport({
+      width: 1366,
       height: 768,
       deviceScaleFactor: 1,
       hasTouch: false,
@@ -252,11 +252,11 @@ class PuppeteerFormChecker {
 
       this.captchaMonitorEnabled = captchaExpected;
       this.captchaDetected = false;
-    this.debugSteps = [];
+      this.debugSteps = [];
       this.validationLog = [];
       this.classificationLog = [];
       this.validationRules = this.normalizeValidationRules(validationRules);
-    this.captchaDetails = { detected: false, selectors: [], errors: [] };
+      this.captchaDetails = { detected: false, selectors: [], errors: [] };
       this.logStep('run.start', { url, captchaExpected });
 
       // Use stderr for logging to avoid interfering with JSON output
@@ -264,13 +264,13 @@ class PuppeteerFormChecker {
       this.logStep('navigation.request', { url, timeout });
       const networkIdleTimeout = parseInt(process.env.PUPPETEER_IDLE_TIMEOUT_MS || '15000', 10);
 
-      const navigationResponse = await this.page.goto(url, { 
-        waitUntil: 'networkidle2', 
-        timeout: timeout 
+      const navigationResponse = await this.page.goto(url, {
+        waitUntil: 'networkidle2',
+        timeout: timeout
       });
       const navigationDetails = await this.snapshotResponse(navigationResponse);
       this.logStep('navigation.response', navigationDetails || { warning: 'no response' });
-      
+
       // Store initial URL for comparison
       this.initialUrl = this.page.url();
       this.logStep('navigation.complete', { initialUrl: this.initialUrl });
@@ -314,7 +314,7 @@ class PuppeteerFormChecker {
       // Wait for form to be present
       const formSelector = this.buildFormSelector(selectorType, selectorValue);
       await this.page.waitForSelector(formSelector, { timeout: 30000 });
-      
+
       // Store form selector for later comparison
       this.lastFormSelector = formSelector;
 
@@ -366,7 +366,7 @@ class PuppeteerFormChecker {
         console.error('Network idle timeout, continuing...');
         this.logStep('network.idle.timeout', { message: networkError.message });
       }
-      
+
       try {
         await this.page.waitForFunction(() => document.readyState === 'complete', { timeout: 30000 });
         console.error('Page is fully loaded');
@@ -392,8 +392,8 @@ class PuppeteerFormChecker {
       // Take screenshot for debugging
       let screenshot = null;
       try {
-        screenshot = await this.page.screenshot({ 
-          type: 'png', 
+        screenshot = await this.page.screenshot({
+          type: 'png',
           fullPage: true,
           encoding: 'base64'
         });
@@ -414,14 +414,28 @@ class PuppeteerFormChecker {
       const message = await this.extractMessage(successSelector, errorSelector);
 
       // Only mark as success if form submission was validated
-      let finalSuccess = submissionValidated && status === 'success';
-      let finalStatus = finalSuccess ? status : 'failure';
+      // FIX: If we have a positive classification (success indicator found), we should trust it
+      // even if the generic validation heuristics failed (e.g. form still present).
+      let finalSuccess = status === 'success';
+
+      if (status === 'success' && !submissionValidated) {
+        console.error('Classification success but validation failed - trusting classification');
+      } else if (status !== 'success' && submissionValidated) {
+        // If validation passed (e.g. URL changed) but we didn't find specific success indicators,
+        // we can consider it a success if no error indicators were found.
+        if (status !== 'failure') {
+          finalSuccess = true;
+          status = 'success';
+        }
+      }
+
+      let finalStatus = finalSuccess ? 'success' : 'failure';
       let finalMessage = finalSuccess ? message : (classification.reason || 'Form submission failed or could not be validated');
       let captchaBlocking = false;
 
       if (this.captchaMonitorEnabled) {
         const captchaOutcome = await this.evaluateCaptchaOutcome(captchaDetected);
-        
+
         // Only override result if CAPTCHA was detected and evaluated
         if (captchaOutcome !== null) {
           captchaBlocking = captchaOutcome.blocking;
@@ -445,7 +459,7 @@ class PuppeteerFormChecker {
           });
         }
       }
-      
+
       return {
         success: finalSuccess,
         status: finalStatus,
@@ -475,7 +489,7 @@ class PuppeteerFormChecker {
     } catch (error) {
       console.error('Form check failed:', error.message);
       console.error('Error stack:', error.stack);
-      
+
       // Try to get current page info for debugging
       let currentUrl = 'unknown';
       let pageContent = 'unknown';
@@ -483,8 +497,8 @@ class PuppeteerFormChecker {
       try {
         currentUrl = this.page.url();
         pageContent = await this.page.content();
-        screenshot = await this.page.screenshot({ 
-          type: 'png', 
+        screenshot = await this.page.screenshot({
+          type: 'png',
           fullPage: true,
           encoding: 'base64'
         });
@@ -654,7 +668,7 @@ class PuppeteerFormChecker {
     for (const mapping of fieldMappings) {
       try {
         const { selector, value, type = 'text', clearFirst = true, delay = 100 } = mapping;
-        
+
         // Try different selector strategies
         const selectors = [
           selector,
@@ -677,7 +691,7 @@ class PuppeteerFormChecker {
             if (element) {
               const isVisible = await element.isVisible();
               const isEnabled = await element.isEnabled();
-              
+
               if (!isVisible || !isEnabled) {
                 console.error(`Element not visible/enabled: ${selectorToTry}`);
                 continue;
@@ -685,7 +699,7 @@ class PuppeteerFormChecker {
 
               const tagName = await element.evaluate(el => el.tagName.toLowerCase());
               const inputType = await element.evaluate(el => el.type || 'text');
-              
+
               console.error(`Filling ${tagName}[${inputType}]: ${selectorToTry} = ${value}`);
 
               // Scroll element into view
@@ -793,7 +807,7 @@ class PuppeteerFormChecker {
 
   async executeCustomAction(action) {
     const { type, selector, value, waitTime = 1000 } = action;
-    
+
     switch (type) {
       case 'click':
         const clickElement = await this.page.$(selector);
@@ -833,7 +847,7 @@ class PuppeteerFormChecker {
   async submitFormAdvanced(formSelector) {
     try {
       console.error(`Looking for submit elements with form selector: ${formSelector}`);
-      
+
       // Try different submission methods with advanced strategies
       const submitSelectors = [
         'button[type="submit"]',
@@ -857,7 +871,7 @@ class PuppeteerFormChecker {
       for (const selector of submitSelectors) {
         try {
           console.error(`Trying selector: ${selector}`);
-          
+
           // Try to find element within the form context
           const element = await this.page.evaluateHandle((formSel, submitSel) => {
             const form = document.querySelector(formSel);
@@ -870,14 +884,14 @@ class PuppeteerFormChecker {
           if (element && element.asElement) {
             const elementHandle = element.asElement();
             console.error(`Found element with selector: ${selector}`);
-            
+
             // Check if element is visible and clickable
             const isVisible = await elementHandle.isVisible();
             const isEnabled = await elementHandle.isEnabled();
             const isIntersectingViewport = await elementHandle.isIntersectingViewport();
-            
+
             console.error(`Element visible: ${isVisible}, enabled: ${isEnabled}, in viewport: ${isIntersectingViewport}`);
-            
+
             if (isVisible && isEnabled) {
               // Scroll element into view if needed
               if (!isIntersectingViewport) {
@@ -918,25 +932,25 @@ class PuppeteerFormChecker {
 
       if (!submitted) {
         console.error('No submit button found, trying advanced submission methods...');
-        
+
         // Try JavaScript-based submission
         try {
           const result = await this.page.evaluate((selector) => {
             const form = document.querySelector(selector);
             if (form && form.tagName === 'FORM') {
               console.error('Found form element, submitting...');
-              
+
               // Try different submission methods
               try {
                 form.submit();
                 return 'form_submitted';
               } catch (submitError) {
                 console.error('Direct submit failed, trying dispatchEvent...');
-                
+
                 // Try dispatching submit event
                 const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
                 const dispatched = form.dispatchEvent(submitEvent);
-                
+
                 if (dispatched) {
                   return 'form_submit_event_dispatched';
                 } else {
@@ -957,7 +971,7 @@ class PuppeteerFormChecker {
             }
             return 'no_form_found';
           }, formSelector);
-          
+
           console.error(`JavaScript form submission result: ${result}`);
           if (result !== 'no_form_found') {
             submitted = true;
@@ -971,7 +985,7 @@ class PuppeteerFormChecker {
         console.error('All submission methods failed');
         throw new Error('Could not submit form using any method');
       }
-      
+
       console.error('Form submission successful');
     } catch (error) {
       console.error('Form submission failed:', error.message);
@@ -1054,7 +1068,7 @@ class PuppeteerFormChecker {
         'submitted successfully',
         ...this.validationRules.successPhrases,
       ]);
-      
+
       if (submissionSuccess) {
         console.error('Success phrases found in page text');
         return this.recordClassification('success', 'Success phrases found after submission');
@@ -1072,10 +1086,11 @@ class PuppeteerFormChecker {
   async validateFormSubmission(formSelector) {
     try {
       // Check if form is still present (indicates submission failure)
+      // Check if form is still present (indicates submission failure OR ajax form)
       const formStillPresent = await this.page.$(formSelector);
       if (formStillPresent) {
-        console.error('Form is still present after submission - likely failed');
-        return this.recordValidation(false, 'Form still present after submission');
+        console.error('Form is still present after submission - checking for other success indicators');
+        // Do not return false immediately, as it might be an AJAX form
       }
 
       // Check for URL changes
@@ -1106,7 +1121,7 @@ class PuppeteerFormChecker {
         'contact form submitted',
         ...this.validationRules.successPhrases,
       ]);
-      
+
       if (successMessages) {
         console.error('Success messages found in page text');
         return this.recordValidation(true, 'Success phrases detected after submission');
@@ -1116,7 +1131,7 @@ class PuppeteerFormChecker {
       const formInputs = await this.page.evaluate((selector) => {
         const form = document.querySelector(selector);
         if (!form) return 'form_gone';
-        
+
         const inputs = form.querySelectorAll('input, textarea, select');
         let hasValues = false;
         for (const input of inputs) {
@@ -1125,19 +1140,19 @@ class PuppeteerFormChecker {
             break;
           }
         }
-        
+
         if (!hasValues) {
           return 'form_cleared';
         }
-        
+
         return 'form_with_values';
       }, formSelector);
-      
+
       if (formInputs === 'form_gone') {
         console.error('Form disappeared after submission - likely success');
         return this.recordValidation(true, 'Form disappeared after submission');
       }
-      
+
       if (formInputs === 'form_cleared') {
         console.error('Form was cleared after submission - possible success');
         return this.recordValidation(true, 'Form inputs cleared after submission');
@@ -1155,7 +1170,7 @@ class PuppeteerFormChecker {
     try {
       // Try to extract message from success/error selectors
       const selectors = [successSelector, errorSelector].filter(Boolean);
-      
+
       for (const selector of selectors) {
         const element = await this.page.$(selector);
         if (element) {
@@ -1215,7 +1230,7 @@ async function main() {
 
   const configJson = process.argv[2];
   let config;
-  
+
   try {
     config = JSON.parse(configJson);
   } catch (error) {
@@ -1224,7 +1239,7 @@ async function main() {
   }
 
   const checker = new PuppeteerFormChecker();
-  
+
   try {
     await checker.initialize();
     const result = await checker.checkForm(config);
@@ -1239,7 +1254,7 @@ async function main() {
 
 // Run if called directly
 if (import.meta.url === `file://${process.argv[1]}`) {
-    main().catch(console.error);
+  main().catch(console.error);
 }
 
 export default PuppeteerFormChecker;
