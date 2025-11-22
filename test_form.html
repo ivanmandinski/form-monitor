@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<body>
+    <form id="contact-form" action="#" method="POST">
+        <input type="text" name="full_name" placeholder="Your Name">
+        <input type="email" name="email_address" placeholder="Email">
+        <input type="tel" name="phone_number" placeholder="Phone">
+        <select name="inquiry_type">
+            <option value="">Select one...</option>
+            <option value="support">Support</option>
+            <option value="sales">Sales</option>
+        </select>
+        <textarea name="message_body" placeholder="Message"></textarea>
+        <input type="checkbox" name="terms" id="terms">
+        <label for="terms">I agree to terms</label>
+        <button type="submit">Send</button>
+    </form>
+    <div class="success-message" style="display:none;">Message Sent!</div>
+    <script>
+        document.querySelector('form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            document.querySelector('form').style.display = 'none';
+            document.querySelector('.success-message').style.display = 'block';
+        });
+    </script>
+</body>
+</html>

@@ -1252,8 +1252,13 @@ class PuppeteerFormChecker {
 
       for (const element of elements) {
         try {
-          const isVisible = await element.isVisible();
-          const isEnabled = await element.isEnabled();
+          // Check visibility and enabled state using evaluate for better compatibility
+          const { isVisible, isEnabled } = await element.evaluate(el => {
+            const style = window.getComputedStyle(el);
+            const visible = style && style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
+            const enabled = !el.disabled;
+            return { isVisible: visible, isEnabled: enabled };
+          });
 
           if (!isVisible || !isEnabled) continue;
 
