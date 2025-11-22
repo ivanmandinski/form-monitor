@@ -61,7 +61,7 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     
     // Settings
     Route::get('settings', [SettingsController::class, 'index'])->name('settings.index');
-    Route::post('settings', [SettingsController::class, 'update'])->name('settings.update');
+    Route::put('settings', [SettingsController::class, 'update'])->name('settings.update');
 });
 
 require __DIR__.'/auth.php';
